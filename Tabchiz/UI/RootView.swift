@@ -44,6 +44,7 @@ struct RootView: View {
                         store.jump(to: placeID, in: tabID)
                     },
                     onJumpToCluster: { coordinates, tabID in
+                        showMap()
                         store.jumpToResults(framing: coordinates, in: tabID)
                     },
                     onCameraChange: { store.cameraDidChange($0, in: $1) }

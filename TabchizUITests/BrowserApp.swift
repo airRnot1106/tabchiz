@@ -45,6 +45,18 @@ struct BrowserApp {
         app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'place.' AND label == %@", name)).firstMatch
     }
 
+    /// The bubble of the tab's places that overlap in the overview.
+    func overviewCluster(ofTab index: Int) -> XCUIElement {
+        app.descendants(matching: .any)["overviewCluster.\(index)"]
+    }
+
+    /// Drags the sheet up to its full height.
+    func raiseSheet() {
+        let summary = app.descendants(matching: .any)["resultsSummary"]
+        let above = summary.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 0, dy: -60))
+        above.press(forDuration: 0.1, thenDragTo: above.withOffset(CGVector(dx: 0, dy: -700)))
+    }
+
     /// A dot of the tab in the overview that no other marker and no control covers, so a tap lands on it.
     func uncoveredOverviewDot(ofTab index: Int) -> XCUIElement? {
         let markers = app.descendants(matching: .any)
