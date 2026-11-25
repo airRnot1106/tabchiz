@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The tabs at the bottom of the sheet: a color dot and a name each, one tap to switch. The strip scrolls when the
+/// The tabs at the bottom of the sheet: a color dot, a name and the number of pins each, one tap to switch. The strip scrolls when the
 /// tabs do not fit, and the overview item stays in place next to it.
 struct TabBar: View {
     static let height: CGFloat = 60
@@ -52,6 +52,15 @@ struct TabBar: View {
                     .lineLimit(1)
                     .frame(maxWidth: 140)
                     .fixedSize()
+                if !tab.pins.isEmpty {
+                    Label("\(tab.pins.count)", systemImage: "mappin")
+                        .labelStyle(.titleAndIcon)
+                        .labelIconToTitleSpacing(1)
+                        .font(.caption.weight(.semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .fixedSize()
+                }
             }
             .padding(.horizontal, 14)
             .frame(height: 44)
@@ -62,6 +71,7 @@ struct TabBar: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(tab.title)
+        .accessibilityValue(tab.pins.isEmpty ? "" : "ピン\(tab.pins.count)個")
         .accessibilityAddTraits(isOnScreen ? .isSelected : [])
         .accessibilityIdentifier("tab.\(index)")
         .contextMenu {

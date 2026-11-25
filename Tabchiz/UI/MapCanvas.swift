@@ -16,10 +16,14 @@ struct MapCanvas: UIViewRepresentable {
     let controlInsets: UIEdgeInsets
     /// Space covered by the sheet at its current height. The camera frames places inside it.
     let obscuredInsets: UIEdgeInsets
-    /// A place of the tab on screen was tapped.
-    let onOpen: (PlaceID, TabID) -> Void
-    /// A place that belongs to another tab was tapped, or any place in the overview.
-    let onJump: (PlaceID, TabID) -> Void
+    /// A place or a pin of the tab on screen was tapped.
+    let onOpen: (Spot, TabID) -> Void
+    /// A spot that belongs to another tab was tapped, or a place in the overview.
+    let onJump: (Spot, TabID) -> Void
+    /// A pin was tapped in the overview, or with nil the selected pin was let go by a tap on the map.
+    let onSelectPin: (PinRef?) -> Void
+    /// The map of a tab was pressed long at a spot without a marker.
+    let onDropPin: (Coordinate) -> Void
     /// A cluster of one tab's places was tapped in the overview.
     let onJumpToCluster: ([Coordinate], TabID) -> Void
     let onCameraChange: (CameraRegion, MapScene) -> Void
@@ -45,6 +49,10 @@ struct MapCanvas: UIViewRepresentable {
         mapView.insetsLayoutMarginsFromSafeArea = false
         mapView.layoutMargins = controlInsets
         mapView.accessibilityIdentifier = "map"
+        mapView.addGestureRecognizer(
+            UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.didLongPress))
+        )
+        mapView.register(PinMarkerView.self, forAnnotationViewWithReuseIdentifier: PinMarkerView.reuseID)
         mapView.register(PlaceMarkerView.self, forAnnotationViewWithReuseIdentifier: PlaceMarkerView.reuseID)
         mapView.register(PlaceClusterView.self, forAnnotationViewWithReuseIdentifier: PlaceClusterView.reuseID)
         mapView.register(OverviewDotView.self, forAnnotationViewWithReuseIdentifier: OverviewDotView.reuseID)
@@ -82,12 +90,16 @@ struct MapCanvas: UIViewRepresentable {
         var scene: MapScene?
         var renderedContent: MapContent?
         var appliedCommandID: Int?
+        /// True while the annotations are swapped, when MapKit reports selections nobody made.
+        private var isRendering = false
 
         init(parent: MapCanvas) {
             self.parent = parent
         }
 
         func render(_ content: MapContent, on mapView: MKMapView) {
+            isRendering = true
+            defer { isRendering = false }
             mapView.removeAnnotations(mapView.annotations.filter { !($0 is MKUserLocation) })
             mapView.removeOverlays(mapView.overlays)
             for line in content.lines {
@@ -100,10 +112,10 @@ struct MapCanvas: UIViewRepresentable {
                 dashed.title = line.color.rawValue
                 mapView.addOverlays([casing, dashed], level: .aboveRoads)
             }
-            let annotations = content.pins.map(PlaceAnnotation.init)
+            let annotations = content.markers.map(SpotAnnotation.init)
             mapView.addAnnotations(annotations)
             // MapKit's selected marker is the enlarged one.
-            if let selected = annotations.first(where: { $0.pin.role == .selected }) {
+            if let selected = annotations.first(where: { $0.marker.role == .selected }) {
                 mapView.selectAnnotation(selected, animated: false)
             }
         }
@@ -146,23 +158,35 @@ struct MapCanvas: UIViewRepresentable {
 
         func mapView(_ mapView: MKMapView, viewFor annotation: any MKAnnotation) -> MKAnnotationView? {
             switch annotation {
-            case let place as PlaceAnnotation:
-                let isOverview = place.pin.role == .overview
-                let view = mapView.dequeueReusableAnnotationView(
-                    withIdentifier: isOverview ? OverviewDotView.reuseID : PlaceMarkerView.reuseID,
-                    for: annotation
-                )
-                // The viewed place and the nearest places stay out of clusters, and a place in the overview
-                // clusters only with its own tab. MapKit groups views by this identifier before prepareForDisplay
-                // runs, so it is set here.
-                switch place.pin.role {
-                case .normal, .dimmed: view.clusteringIdentifier = Self.clusteringID
-                case .selected, .nearest: view.clusteringIdentifier = nil
-                case .overview: view.clusteringIdentifier = place.pin.tabID.rawValue.uuidString
+            case let spot as SpotAnnotation:
+                let marker = spot.marker
+                // MapKit groups views by the clustering identifier before prepareForDisplay runs, so it is set
+                // here. A pin, the viewed place and the nearest places stay out of clusters, and a place in the
+                // overview clusters only with its own tab.
+                let reuseID: String
+                let clusteringID: String?
+                switch (marker.spot, marker.role) {
+                case (.pin, _):
+                    reuseID = PinMarkerView.reuseID
+                    clusteringID = nil
+                case (.place, .overview):
+                    reuseID = OverviewDotView.reuseID
+                    clusteringID = marker.tabID.rawValue.uuidString
+                case (.place, .normal), (.place, .dimmed):
+                    reuseID = PlaceMarkerView.reuseID
+                    clusteringID = Self.clusteringID
+                case (.place, .selected), (.place, .nearest):
+                    reuseID = PlaceMarkerView.reuseID
+                    clusteringID = nil
                 }
+                let view = mapView.dequeueReusableAnnotationView(withIdentifier: reuseID, for: annotation)
+                view.clusteringIdentifier = clusteringID
+                // MapKit also decides which markers to hide before prepareForDisplay runs, and never prepares a
+                // hidden one, so every marker except a dimmed place is marked as always shown here.
+                view.displayPriority = marker.role == .dimmed && marker.pin == nil ? .defaultLow : .required
                 return view
             case let cluster as MKClusterAnnotation:
-                let isOverview = (cluster.memberAnnotations.first as? PlaceAnnotation)?.pin.role == .overview
+                let isOverview = cluster.markers.first?.role == .overview
                 return mapView.dequeueReusableAnnotationView(
                     withIdentifier: isOverview ? OverviewClusterView.reuseID : PlaceClusterView.reuseID,
                     for: annotation
@@ -188,22 +212,23 @@ struct MapCanvas: UIViewRepresentable {
 
         func mapView(_ mapView: MKMapView, didSelect annotation: any MKAnnotation) {
             switch annotation {
-            case let place as PlaceAnnotation:
-                let pin = place.pin
-                switch pin.role {
-                case .selected:
-                    break
-                case .normal, .dimmed:
-                    mapView.deselectAnnotation(annotation, animated: false)
-                    parent.onOpen(pin.place.id, pin.tabID)
-                case .nearest, .overview:
-                    mapView.deselectAnnotation(annotation, animated: false)
-                    parent.onJump(pin.place.id, pin.tabID)
+            case let spot as SpotAnnotation:
+                let marker = spot.marker
+                guard marker.role != .selected else { return }
+                mapView.deselectAnnotation(annotation, animated: false)
+                if scene == .overview, let pin = marker.pin {
+                    parent.onSelectPin(PinRef(tabID: marker.tabID, pinID: pin.id))
+                    return
+                }
+                switch marker.role {
+                case .normal, .dimmed: parent.onOpen(marker.spot, marker.tabID)
+                case .nearest, .overview: parent.onJump(marker.spot, marker.tabID)
+                case .selected: break
                 }
             case let cluster as MKClusterAnnotation:
                 mapView.deselectAnnotation(annotation, animated: false)
-                if let pin = (cluster.memberAnnotations.first as? PlaceAnnotation)?.pin, pin.role == .overview {
-                    parent.onJumpToCluster(cluster.memberAnnotations.map { Coordinate($0.coordinate) }, pin.tabID)
+                if let marker = cluster.markers.first, marker.role == .overview {
+                    parent.onJumpToCluster(cluster.memberAnnotations.map { Coordinate($0.coordinate) }, marker.tabID)
                     return
                 }
                 // Zooms in until the cluster splits, like Maps. Places too close to split stay one marker and are
@@ -216,6 +241,28 @@ struct MapCanvas: UIViewRepresentable {
             default:
                 mapView.deselectAnnotation(annotation, animated: false)
             }
+        }
+
+        /// A tap on the map lets go of the pin the overview has selected.
+        func mapView(_ mapView: MKMapView, didDeselect annotation: any MKAnnotation) {
+            guard !isRendering, scene == .overview, let marker = (annotation as? SpotAnnotation)?.marker,
+                marker.role == .selected
+            else { return }
+            parent.onSelectPin(nil)
+        }
+
+        /// A long press on the map of a tab drops a pin there. A press on a marker is left to the marker.
+        @objc func didLongPress(_ recognizer: UILongPressGestureRecognizer) {
+            guard recognizer.state == .began, case .tab = scene, let mapView = recognizer.view as? MKMapView
+            else { return }
+            let point = recognizer.location(in: mapView)
+            var hit = mapView.hitTest(point, with: nil)
+            while let view = hit {
+                if view is MKAnnotationView { return }
+                hit = view.superview
+            }
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            parent.onDropPin(Coordinate(mapView.convert(point, toCoordinateFrom: mapView)))
         }
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {

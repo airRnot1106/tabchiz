@@ -47,3 +47,26 @@ nonisolated final class StubSearcher: PlaceSearcher {
         return results[query.text] ?? []
     }
 }
+
+/// Names every spot `name` after an optional delay, or finds no name when `name` is nil. Records the spots it
+/// was asked about.
+nonisolated final class StubNamer: PinNamer {
+    private let name: String?
+    private let delay: Duration?
+    private let requested = Mutex<[Coordinate]>([])
+
+    init(_ name: String? = nil, delay: Duration? = nil) {
+        self.name = name
+        self.delay = delay
+    }
+
+    var coordinates: [Coordinate] { requested.withLock { $0 } }
+
+    func name(at coordinate: Coordinate) async -> String? {
+        requested.withLock { $0.append(coordinate) }
+        if let delay {
+            try? await Task.sleep(for: delay)
+        }
+        return name
+    }
+}

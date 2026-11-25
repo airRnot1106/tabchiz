@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Which color is which tab, over the overview map.
+/// Which color is which tab, and how many pins each tab has, over the overview map.
 struct OverviewLegend: View {
     let tabs: [MapTab]
 
@@ -14,6 +14,14 @@ struct OverviewLegend: View {
                     Text(tab.title)
                         .font(.subheadline)
                         .lineLimit(1)
+                    if !tab.pins.isEmpty {
+                        Label("\(tab.pins.count)", systemImage: "mappin")
+                            .labelStyle(.titleAndIcon)
+                            .labelIconToTitleSpacing(1)
+                            .font(.footnote.weight(.semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
         }
@@ -25,12 +33,14 @@ struct OverviewLegend: View {
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .allowsHitTesting(false)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("凡例 " + tabs.map(\.title).joined(separator: "、"))
+        .accessibilityLabel(
+            "凡例 " + tabs.map { $0.pins.isEmpty ? $0.title : "\($0.title) ピン\($0.pins.count)個" }.joined(separator: "、")
+        )
         .accessibilityIdentifier("overviewLegend")
     }
 }
 
-/// The tabs as a list with their result counts. Picking one leaves the overview for that tab.
+/// The tabs as a list with their result and pin counts. Picking one leaves the overview for that tab.
 struct OverviewPage: View {
     let tabs: [MapTab]
     let onPick: (MapTab) -> Void
@@ -48,7 +58,9 @@ struct OverviewPage: View {
                     .accessibilityIdentifier("overviewRow.\(index)")
                 }
             } footer: {
-                Text("地図の点をタップすると、そのタブでその場所を開きます。数字をタップすると、そのタブでその周辺を表示します。")
+                Text(
+                    "ピンをタップすると、ほかのタブで最も近い場所までの距離を表示します。点をタップすると、そのタブでその場所を開きます。数字をタップすると、そのタブでその周辺を表示します。"
+                )
             }
         }
         .listStyle(.insetGrouped)
@@ -56,14 +68,68 @@ struct OverviewPage: View {
     }
 
     private func caption(_ tab: MapTab) -> String {
-        switch tab.current.page {
-        case .blank: "未検索"
-        case .results(_, .idle), .results(_, .searching): "検索中…"
-        case .results(_, .throttled): "再検索を待っています"
-        case .results(_, .failed): "検索できませんでした"
-        case .results(_, .loaded(let places)): "\(places.count)件"
-        case .place(let shown): "\(shown.places.count)件"
+        let pins = tab.pins.isEmpty ? nil : "ピン \(tab.pins.count)個"
+        return [Self.results(tab), pins].compactMap(\.self).joined(separator: "・")
+    }
+
+    /// What the tab's search found, in the same words on its results page and on a pin page over them. Nil for a
+    /// tab that has pins and no search.
+    static func results(_ tab: MapTab) -> String? {
+        switch tab.current.page.searchState {
+        case nil: tab.pins.isEmpty ? "未検索" : nil
+        case .idle, .searching: "検索中…"
+        case .throttled: "再検索を待っています"
+        case .failed: "検索できませんでした"
+        case .loaded(let places): "\(places.count)件"
         }
+    }
+}
+
+/// The pin the overview has selected: for every other tab its nearest spot with the straight-line distance, and
+/// a button that opens the pin in its own tab.
+struct OverviewPinPage: View {
+    let tab: MapTab
+    let pin: Pin
+    let nearest: [NearestEntry]
+    let onJump: (NearestEntry) -> Void
+    let onOpen: () -> Void
+    let onClose: () -> Void
+
+    var body: some View {
+        List {
+            Section {
+                HStack(spacing: 12) {
+                    SpotSymbol(systemName: "mappin", color: tab.color)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(pin.name)
+                            .font(.title3.weight(.semibold))
+                            .accessibilityIdentifier("overviewPinTitle")
+                        Text(tab.title)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 8)
+                    Button(action: onClose) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(.secondary)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("選択を解除")
+                    .accessibilityIdentifier("overviewPinCloseButton")
+                }
+            }
+            NearestSection(entries: nearest, onJump: onJump)
+            Section {
+                Button("このピンをタブで開く", systemImage: "arrow.up.right.square", action: onOpen)
+                    .accessibilityIdentifier("openPinInTabButton")
+            }
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
     }
 }
 

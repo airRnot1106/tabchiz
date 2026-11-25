@@ -186,12 +186,43 @@ struct BrowserHistoryTests {
         browser.addTab()
 
         browser.openPlace(Samples.market.id, in: supermarkets)
-        let nearest = browser.nearestToViewedPlace(in: supermarkets)
+        let nearest = browser.nearestToViewedSpot(in: supermarkets)
 
         #expect(nearest.map(\.tabID) == [gyms])
-        #expect(nearest.first?.place == Samples.nearGym)
+        #expect(nearest.first?.spot == .place(Samples.nearGym))
         #expect(abs((nearest.first?.distance ?? 0) - 133.43) < 1)
-        #expect(browser.nearestToViewedPlace(in: gyms).isEmpty)
+        #expect(browser.nearestToViewedSpot(in: gyms).isEmpty)
+    }
+
+    @Test func aPinPageHasTheNearestSpotOfEveryOtherTab() throws {
+        let loaded = try LoadedBrowser()
+        var browser = loaded.browser
+        let added = browser.addTab()
+        let apartments = try #require(added)
+        let pin = try browser.droppedPin(at: Samples.market.coordinate, in: apartments)
+
+        browser.openPin(PinRef(tabID: apartments, pinID: pin.id))
+        let nearest = browser.nearestToViewedSpot(in: apartments)
+
+        #expect(nearest.map(\.tabID) == [loaded.supermarkets, loaded.gyms])
+        #expect(nearest.map(\.spot) == [.place(Samples.market), .place(Samples.nearGym)])
+        #expect(abs(nearest[0].distance) < 0.01)
+        #expect(abs(nearest[1].distance - 133.43) < 1)
+    }
+
+    @Test func aPinSelectedInTheOverviewHasTheNearestSpotOfEveryOtherTab() throws {
+        let loaded = try LoadedBrowser()
+        var browser = loaded.browser
+        let pin = try browser.droppedPin(at: Samples.market.coordinate, in: loaded.supermarkets)
+        browser.showOverview()
+        #expect(browser.nearestToSelectedPin().isEmpty)
+
+        browser.selectPinInOverview(PinRef(tabID: loaded.supermarkets, pinID: pin.id))
+        let nearest = browser.nearestToSelectedPin()
+
+        #expect(nearest.map(\.tabID) == [loaded.gyms])
+        #expect(nearest.first?.spot == .place(Samples.nearGym))
+        #expect(abs((nearest.first?.distance ?? 0) - 133.43) < 1)
     }
 
     @Test func launchingCentersEveryTabOnTheUserAndKeepsItsZoom() throws {

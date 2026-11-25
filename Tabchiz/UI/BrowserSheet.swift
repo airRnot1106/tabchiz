@@ -7,7 +7,7 @@ extension PresentationDetent {
 
 /// The sheet that always rests over the map, as in Maps. From top to bottom: the search field of the tab on
 /// screen with its back button and the new-tab button, the tab's page, and the tab bar. In the overview the search field and the page
-/// give way to a list of the tabs.
+/// give way to a list of the tabs, or to the pin the overview has selected.
 struct BrowserSheet: View {
     private static let headerHeight: CGFloat = 72
     static let collapsedHeight = headerHeight + TabBar.height
@@ -26,11 +26,11 @@ struct BrowserSheet: View {
             if store.browser.mode.scene == .overview {
                 overviewHeader
                     .frame(height: Self.headerHeight, alignment: .bottom)
-                OverviewPage(tabs: store.browser.tabs) { store.showTab($0.id) }
+                overviewPage
             } else {
                 header
                     .frame(height: Self.headerHeight, alignment: .bottom)
-                page
+                TabPage(store: store, tab: tab, typed: isEditing ? draft : nil, onSearch: commit, showMap: showMap)
             }
             // The keyboard takes the bar's place while a query is typed.
             if !isEditing {
@@ -101,19 +101,39 @@ struct BrowserSheet: View {
 
     private var overviewHeader: some View {
         let tabs = store.browser.tabs
+        let pinCount = tabs.map(\.pins.count).reduce(0, +)
         return HStack(spacing: 8) {
             Label("全体", systemImage: "square.3.layers.3d")
                 .font(.headline)
             Spacer()
-            Text("\(tabs.count)タブ・\(tabs.map(\.places.count).reduce(0, +))件")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .accessibilityIdentifier("overviewSummary")
+            Text(
+                "\(tabs.count)タブ・\(tabs.map(\.places.count).reduce(0, +))件"
+                    + (pinCount == 0 ? "" : "・ピン \(pinCount)個")
+            )
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .accessibilityIdentifier("overviewSummary")
         }
         .padding(.horizontal, 20)
         .frame(height: 44)
         .padding(.bottom, 8)
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+    }
+
+    /// The pin the overview has selected with its nearest spots, or the list of the tabs.
+    @ViewBuilder private var overviewPage: some View {
+        if let selected = store.browser.selectedPin {
+            OverviewPinPage(
+                tab: selected.tab,
+                pin: selected.pin,
+                nearest: NearestEntry.entries(for: store.browser.nearestToSelectedPin(), in: store.browser),
+                onJump: { store.jump(to: $0.spot, in: $0.tab.id) },
+                onOpen: { store.openPin(PinRef(tabID: selected.tab.id, pinID: selected.pin.id)) },
+                onClose: { store.selectPinInOverview(nil) }
+            )
+        } else {
+            OverviewPage(tabs: store.browser.tabs) { store.showTab($0.id) }
+        }
     }
 
     private var searchField: some View {
@@ -158,43 +178,6 @@ struct BrowserSheet: View {
         store.submit(query, in: tab.id)
         isEditing = false
         detent = .medium
-    }
-
-    // MARK: Page
-
-    @ViewBuilder private var page: some View {
-        if isEditing {
-            SearchSuggestions(text: draft, onPick: commit)
-        } else {
-            switch tab.current.page {
-            case .blank:
-                SearchSuggestions(text: "", onPick: commit)
-            case .results(_, let state):
-                ResultsPage(
-                    tab: tab,
-                    state: state,
-                    onOpen: { place in
-                        showMap()
-                        store.openPlace(place.id, in: tab.id)
-                    },
-                    onRetry: { store.searchHere(in: tab.id) }
-                )
-            case .place(let shown):
-                PlacePageView(
-                    tab: tab,
-                    place: shown.place,
-                    nearest: store.browser.nearestToViewedPlace(in: tab.id).compactMap { match in
-                        store.browser.tab(match.tabID).map {
-                            PlacePageView.Nearest(tab: $0, place: match.place, distance: match.distance)
-                        }
-                    },
-                    onJump: { entry in
-                        showMap()
-                        store.jump(to: entry.place.id, in: entry.tab.id)
-                    }
-                )
-            }
-        }
     }
 
     /// The map comes back into view when a place is picked from a full-height list.

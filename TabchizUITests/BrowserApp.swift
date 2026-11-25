@@ -5,10 +5,14 @@ import XCTest
 struct BrowserApp {
     let app: XCUIApplication
 
-    /// Launches with empty saved tabs, or with one tab per query.
-    static func launch(seeding queries: [String] = []) -> Self {
+    /// Launches with empty saved tabs, with one tab per query, or with the tabs and pins the previous launch
+    /// saved.
+    static func launch(seeding queries: [String] = [], keepingSavedTabs: Bool = false) -> Self {
         let app = XCUIApplication()
         app.launchArguments = ["-UITestFixture"]
+        if keepingSavedTabs {
+            app.launchArguments += ["-KeepSavedTabs"]
+        }
         if !queries.isEmpty {
             app.launchArguments += ["-SeedTabs", queries.joined(separator: ",")]
         }
@@ -24,6 +28,54 @@ struct BrowserApp {
     var overviewTab: XCUIElement { app.buttons["overviewTab"] }
     var overviewLegend: XCUIElement { app.descendants(matching: .any)["overviewLegend"] }
     var overviewSummary: XCUIElement { app.staticTexts["overviewSummary"] }
+
+    var map: XCUIElement { app.descendants(matching: .any)["map"] }
+    var pinsSummary: XCUIElement { app.staticTexts["pinsSummary"] }
+    var pinTitle: XCUIElement { app.staticTexts["pinTitle"] }
+    var pinToggle: XCUIElement { app.buttons["pinToggleButton"] }
+    var overviewPinTitle: XCUIElement { app.staticTexts["overviewPinTitle"] }
+
+    /// A row of the tab's pin list, in the order the pins were added.
+    func pinRow(_ index: Int) -> XCUIElement {
+        app.buttons["pinRow.\(index)"]
+    }
+
+    /// The marker of a pin of the tab at `index` on the map, by the pin's name.
+    func mapPin(_ name: String, ofTab index: Int) -> XCUIElement {
+        app.descendants(matching: .any)["mapPin.\(index).\(name)"]
+    }
+
+    /// The row of the nearest spot of the tab named `title`, on a place page, a pin page or the overview.
+    func nearest(_ title: String) -> XCUIElement {
+        app.buttons["nearest.\(title)"]
+    }
+
+    /// Presses the map long at a point given as fractions of its width and height. The sheet covers the lower
+    /// half of the map, so `dy` stays below 0.45.
+    func dropPin(at offset: CGVector) {
+        map.coordinate(withNormalizedOffset: offset).press(forDuration: 1)
+    }
+
+    /// Pulls the sheet up to its full height, so the rows at the end of a page are on screen.
+    func expandSheet() {
+        let grabber = app.buttons["シートグラバー"]
+        XCTAssertTrue(grabber.waitForExistence(timeout: 5))
+        grabber.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .press(forDuration: 0.1, thenDragTo: map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)))
+    }
+
+    /// Renames the pin whose page is on screen. The alert drops the identifiers of its field and buttons, so
+    /// they are found by their place in the alert.
+    func renameViewedPin(to name: String) {
+        app.buttons["renamePinButton"].tap()
+        let field = app.alerts.textFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        if let old = field.value as? String {
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: old.count))
+        }
+        field.typeText(name)
+        app.alerts.buttons["保存"].tap()
+    }
 
     /// The tab's item in the bar.
     func tab(_ index: Int) -> XCUIElement {
@@ -85,12 +137,28 @@ struct BrowserApp {
         wait(for: app.descendants(matching: .any)["resultsSummary"], toSay: summary, file: file, line: line)
     }
 
+    /// Waits until the pin page of `name` is on screen.
+    func waitForPin(_ name: String, file: StaticString = #filePath, line: UInt = #line) {
+        wait(for: pinTitle, toSay: name, file: file, line: line)
+    }
+
+    /// Waits until the tab's pin list reports `summary`, such as "ピン 3個".
+    func waitForPins(_ summary: String, file: StaticString = #filePath, line: UInt = #line) {
+        wait(for: pinsSummary, toSay: summary, file: file, line: line)
+    }
+
     /// Waits until the place page of `name` is on screen.
     func waitForPlace(_ name: String, file: StaticString = #filePath, line: UInt = #line) {
         wait(for: placeTitle, toSay: name, file: file, line: line)
     }
 
-    private func wait(for element: XCUIElement, toSay label: String, file: StaticString, line: UInt) {
+    /// Waits until the element's label is `label`.
+    func wait(
+        for element: XCUIElement,
+        toSay label: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
         let predicate = NSPredicate(format: "label == %@", label)
         let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
         XCTAssertEqual(

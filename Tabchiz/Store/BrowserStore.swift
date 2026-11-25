@@ -32,23 +32,27 @@ final class BrowserStore {
     private(set) var cameraCommand: CameraCommand?
 
     @ObservationIgnored private let searcher: any PlaceSearcher
+    @ObservationIgnored private let namer: any PinNamer
     @ObservationIgnored private let storage: any TabStorage
     @ObservationIgnored private let budget: RequestBudget
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private let locate: () async -> Coordinate?
     @ObservationIgnored private var searches: [TabID: RunningSearch] = [:]
+    @ObservationIgnored private var namings: [PinID: Task<Void, Never>] = [:]
     @ObservationIgnored private var nextSearchToken = 0
     @ObservationIgnored private var nextCameraCommandID = 0
     @ObservationIgnored private var saved: [SavedTab]
 
     init(
         searcher: any PlaceSearcher,
+        namer: any PinNamer,
         storage: any TabStorage,
         budget: RequestBudget = RequestBudget(),
         now: @escaping () -> Date = { Date() },
         locate: @escaping () async -> Coordinate? = { nil }
     ) {
         self.searcher = searcher
+        self.namer = namer
         self.storage = storage
         self.budget = budget
         self.now = now
@@ -129,6 +133,22 @@ final class BrowserStore {
         frameViewedPlace(placeID, in: id)
     }
 
+    /// Shows the page of a place or a pin of the tab that is on screen.
+    func open(_ spot: Spot, in id: TabID) {
+        switch spot {
+        case .place(let place): openPlace(place.id, in: id)
+        case .pin(let pin): openPin(PinRef(tabID: id, pinID: pin.id))
+        }
+    }
+
+    /// Switches to the tab and shows the spot's page there.
+    func jump(to spot: Spot, in id: TabID) {
+        switch spot {
+        case .place(let place): jump(to: place.id, in: id)
+        case .pin(let pin): openPin(PinRef(tabID: id, pinID: pin.id))
+        }
+    }
+
     /// Switches to the tab and shows the place page there.
     func jump(to placeID: PlaceID, in id: TabID) {
         perform { $0.jump(to: placeID, in: id) }
@@ -181,12 +201,12 @@ final class BrowserStore {
 
     private func frameViewedPlace(_ placeID: PlaceID, in id: TabID) {
         guard browser.mode == .tab(id), let place = browser.tab(id)?.viewedPlace, place.id == placeID else { return }
-        moveCamera(to: .fit([place.coordinate] + browser.nearestToViewedPlace(in: id).map(\.place.coordinate)))
+        moveCamera(to: .fit([place.coordinate] + browser.nearestToViewedSpot(in: id).map(\.spot.coordinate)))
     }
 
     private func frameOverviewIfUnset() {
         guard case .overview = browser.mode, browser.overviewCamera == nil else { return }
-        let coordinates = browser.tabs.flatMap(\.places).map(\.coordinate)
+        let coordinates = browser.tabs.flatMap(\.spots).map(\.coordinate)
         guard !coordinates.isEmpty else { return }
         moveCamera(to: .fit(coordinates))
     }
@@ -205,26 +225,21 @@ final class BrowserStore {
 
     // MARK: Searching
 
-    /// Cancels the search of every tab that no longer shows its results page, and starts one for every results
-    /// page that still waits for results. Each tab keeps its own task.
+    /// Cancels the search of every tab that no longer shows that search, and starts one for every page that still
+    /// waits for the results of its search: a results page or a pin page over them. Each tab keeps its own task.
     private func syncSearches() {
         for (id, running) in searches where browser.tab(id)?.current.page.search != running.search {
             running.task.cancel()
             searches[id] = nil
         }
         for tab in browser.tabs where searches[tab.id] == nil {
-            guard case .results(let search, let state) = tab.current.page else { continue }
-            switch state {
-            case .idle, .searching, .throttled:
-                let id = tab.id
-                nextSearchToken += 1
-                let token = nextSearchToken
-                browser.applySearch(.searching, for: search, in: id)
-                let task = Task { await self.run(search, for: id, token: token) }
-                searches[id] = RunningSearch(token: token, search: search, task: task)
-            case .loaded, .failed:
-                break
-            }
+            guard let search = tab.current.page.pendingSearch else { continue }
+            let id = tab.id
+            nextSearchToken += 1
+            let token = nextSearchToken
+            browser.applySearch(.searching, for: search, in: id)
+            let task = Task { await self.run(search, for: id, token: token) }
+            searches[id] = RunningSearch(token: token, search: search, task: task)
         }
     }
 
@@ -264,5 +279,60 @@ final class BrowserStore {
     private func apply(_ state: SearchState, for search: Search, in id: TabID) {
         browser.applySearch(state, for: search, in: id)
         frameOverviewIfUnset()
+    }
+}
+
+// MARK: - Pins
+
+extension BrowserStore {
+    /// Drops a pin where the tab's map was pressed. The pin shows at once as "ピン N" and takes the name of the
+    /// spot when the name arrives, unless the user renamed or removed the pin in the meantime.
+    @discardableResult
+    func dropPin(at coordinate: Coordinate, in id: TabID) -> Pin? {
+        var dropped: Pin?
+        perform { dropped = $0.dropPin(at: coordinate, in: id) }
+        guard let pin = dropped else { return nil }
+        namings[pin.id] = Task {
+            let name = await namer.name(at: coordinate)
+            namings[pin.id] = nil
+            guard let name else { return }
+            perform { $0.renamePin(PinRef(tabID: id, pinID: pin.id), to: name, ifStillNamed: pin.name) }
+        }
+        return pin
+    }
+
+    /// Pins one of the places the tab shows.
+    func pinPlace(_ placeID: PlaceID, in id: TabID) {
+        perform { $0.pinPlace(placeID, in: id) }
+    }
+
+    func renamePin(_ ref: PinRef, to name: String) {
+        perform { $0.renamePin(ref, to: name) }
+    }
+
+    func removePin(_ ref: PinRef) {
+        perform { $0.removePin(ref) }
+    }
+
+    /// Switches to the pin's tab and shows the pin's page there.
+    func openPin(_ ref: PinRef) {
+        perform { $0.openPin(ref) }
+        guard browser.mode == .tab(ref.tabID), let pin = browser.tab(ref.tabID)?.viewedPin, pin.id == ref.pinID
+        else { return }
+        moveCamera(to: .fit([pin.coordinate] + browser.nearestToViewedSpot(in: ref.tabID).map(\.spot.coordinate)))
+    }
+
+    /// In the overview, shows the nearest spots of a pin, or of none with nil.
+    func selectPinInOverview(_ ref: PinRef?) {
+        perform { $0.selectPinInOverview(ref) }
+        guard let ref, let selected = browser.selectedPin, selected.pin.id == ref.pinID else { return }
+        moveCamera(to: .fit([selected.pin.coordinate] + browser.nearestToSelectedPin().map(\.spot.coordinate)))
+    }
+
+    /// Waits until every dropped pin has its name or is known to have none.
+    func waitForPinNames() async {
+        while let naming = namings.values.first {
+            await naming.value
+        }
     }
 }

@@ -4,38 +4,38 @@ import Foundation
 /// changes.
 struct MapContent: Equatable {
     enum Role: Equatable {
-        /// A place of the tab on screen while no place is viewed.
+        /// A spot of the tab on screen that the tab's page is not about.
         case normal
-        /// The place the tab views: marker with a name label that always shows.
+        /// The spot the tab views, or the pin the overview has selected: enlarged, with its name.
         case selected
-        /// The nearest place of another tab to the viewed place, with its straight-line distance.
+        /// The nearest spot of another tab to the selected one, with its straight-line distance.
         case nearest(distance: Double)
-        /// Any other place of the tab while a place is viewed.
+        /// Any other place of the tab while a spot is viewed. Pins are never dimmed.
         case dimmed
-        /// A place of any tab in the overview: a dot in its tab's color that clusters only with its own tab.
+        /// A spot of any tab in the overview: a place is a dot that clusters only with its own tab, a pin stays
+        /// a marker.
         case overview
     }
 
-    struct Pin: Equatable, Identifiable {
+    struct Marker: Equatable, Identifiable {
         let tabID: TabID
         /// The tab's position in the bar.
         let tabIndex: Int
         let tabName: String
         let symbolName: String
         let color: TabColor
-        let place: Place
+        let spot: Spot
         let role: Role
 
-        var id: String { "\(tabID.rawValue.uuidString)/\(place.id.rawValue)" }
+        var id: String {
+            switch spot {
+            case .place(let place): "\(tabID.rawValue.uuidString)/place/\(place.id.rawValue)"
+            case .pin(let pin): "\(tabID.rawValue.uuidString)/pin/\(pin.id.rawValue.uuidString)"
+            }
+        }
 
-        init(_ place: Place, of tab: MapTab, at tabIndex: Int, role: Role) {
-            tabID = tab.id
-            self.tabIndex = tabIndex
-            tabName = tab.title
-            symbolName = tab.symbolName
-            color = tab.color
-            self.place = place
-            self.role = role
+        var pin: Pin? {
+            if case .pin(let pin) = spot { pin } else { nil }
         }
     }
 
@@ -45,34 +45,86 @@ struct MapContent: Equatable {
         let color: TabColor
     }
 
+    /// A tab with its position in the bar.
+    private struct Layer {
+        let index: Int
+        let tab: MapTab
+
+        func marker(_ spot: Spot, role: Role) -> Marker {
+            Marker(
+                tabID: tab.id,
+                tabIndex: index,
+                tabName: tab.title,
+                symbolName: tab.symbolName,
+                color: tab.color,
+                spot: spot,
+                role: role
+            )
+        }
+
+        /// How the tab draws one of its spots while its page is about `viewed`. A pinned place that is viewed is
+        /// drawn as its pin.
+        func role(of spot: Spot, viewing viewed: Spot?) -> Role {
+            guard let viewed else { return .normal }
+            switch spot {
+            case .place:
+                return spot == viewed ? .selected : .dimmed
+            case .pin(let pin):
+                if spot == viewed { return .selected }
+                if case .place(let place) = viewed, pin.origin == .place(place.id) { return .selected }
+                return .normal
+            }
+        }
+    }
+
     let scene: MapScene
-    let pins: [Pin]
+    let markers: [Marker]
     let lines: [Line]
 
     init(browser: Browser) {
         scene = browser.mode.scene
-        let indexed = Array(browser.tabs.enumerated())
-        guard case .tab(let id) = browser.mode, let (index, tab) = indexed.first(where: { $0.element.id == id })
-        else {
-            pins = indexed.flatMap { index, tab in
-                tab.places.map { Pin($0, of: tab, at: index, role: .overview) }
+        let layers = browser.tabs.enumerated().map { Layer(index: $0.offset, tab: $0.element) }
+        switch browser.mode {
+        case .tab(let id):
+            guard let shown = layers.first(where: { $0.tab.id == id }) else {
+                markers = []
+                lines = []
+                return
             }
-            lines = []
-            return
-        }
-        guard let viewed = tab.viewedPlace else {
-            pins = tab.places.map { Pin($0, of: tab, at: index, role: .normal) }
-            lines = []
-            return
-        }
-        let nearest = browser.nearestToViewedPlace(in: id).compactMap { match in
-            indexed.first { $0.element.id == match.tabID }.map { (match: match, index: $0.offset, tab: $0.element) }
-        }
-        pins =
-            tab.places.map { Pin($0, of: tab, at: index, role: $0.id == viewed.id ? .selected : .dimmed) }
-            + nearest.map {
-                Pin($0.match.place, of: $0.tab, at: $0.index, role: .nearest(distance: $0.match.distance))
+            let viewed = shown.tab.viewedSpot
+            let nearest = browser.nearestToViewedSpot(in: id)
+            markers =
+                shown.tab.spots.map { shown.marker($0, role: shown.role(of: $0, viewing: viewed)) }
+                + nearest.compactMap { match in
+                    layers.first { $0.tab.id == match.tabID }?
+                        .marker(match.spot, role: .nearest(distance: match.distance))
+                }
+            lines = Self.lines(from: viewed, to: nearest, in: layers)
+        case .overview:
+            let selected = browser.selectedPin
+            let nearest = browser.nearestToSelectedPin()
+            markers = layers.flatMap { layer in
+                layer.tab.spots.map { spot in
+                    if let selected, layer.tab.id == selected.tab.id, spot == .pin(selected.pin) {
+                        return layer.marker(spot, role: .selected)
+                    }
+                    if let match = nearest.first(where: { $0.tabID == layer.tab.id && $0.spot == spot }) {
+                        return layer.marker(spot, role: .nearest(distance: match.distance))
+                    }
+                    return layer.marker(spot, role: .overview)
+                }
             }
-        lines = nearest.map { Line(origin: viewed.coordinate, target: $0.match.place.coordinate, color: $0.tab.color) }
+            lines = Self.lines(from: selected.map { .pin($0.pin) }, to: nearest, in: layers)
+        }
+    }
+
+    /// A line from the spot to each of its nearest spots, in the color of the nearest spot's tab.
+    private static func lines(from origin: Spot?, to nearest: [NearestMatch], in layers: [Layer]) -> [Line] {
+        guard let origin else { return [] }
+        return nearest.compactMap { match in
+            layers.first { $0.tab.id == match.tabID }.map {
+                Line(origin: origin.coordinate, target: match.spot.coordinate, color: $0.tab.color)
+            }
+        }
     }
 }

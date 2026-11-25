@@ -6,8 +6,9 @@ nonisolated enum MapScene: Hashable, Sendable {
 
 nonisolated enum Mode: Hashable, Sendable {
     case tab(TabID)
-    /// Every tab's results on one map. `returnTo` is the tab the overview was entered from.
-    case overview(returnTo: TabID)
+    /// Every tab's results and pins on one map. `returnTo` is the tab the overview was entered from. `selected`
+    /// is the pin whose nearest spots the overview shows.
+    case overview(returnTo: TabID, selected: PinRef? = nil)
 
     var scene: MapScene {
         switch self {
@@ -19,12 +20,12 @@ nonisolated enum Mode: Hashable, Sendable {
     /// The tab on screen, or the tab the overview returns to.
     var tabID: TabID {
         switch self {
-        case .tab(let id), .overview(let id): id
+        case .tab(let id), .overview(let id, _): id
         }
     }
 }
 
-/// One to five independent map tabs and the overview derived from them. Every rule about which combinations are
+/// One to five independent map tabs with their pins, and the overview derived from them. Every rule about which combinations are
 /// allowed lives here and in `MapTab`, so the store only forwards user actions and search results.
 nonisolated struct Browser: Hashable, Sendable {
     static let maxTabs = 5
@@ -69,8 +70,8 @@ nonisolated struct Browser: Hashable, Sendable {
         return id
     }
 
-    /// Closes a tab. Closing the tab on screen shows its right neighbor, or its left neighbor when it was the last
-    /// one. Closing the only tab leaves a blank tab on the same area.
+    /// Closes a tab and removes its pins. Closing the tab on screen shows its right neighbor, or its left neighbor
+    /// when it was the last one. Closing the only tab leaves a blank tab on the same area.
     mutating func removeTab(_ id: TabID) {
         guard let index = index(of: id) else { return }
         let removed = tabs.remove(at: index)
@@ -79,9 +80,18 @@ nonisolated struct Browser: Hashable, Sendable {
         }
         let neighbor = tabs[min(index, tabs.count - 1)].id
         switch mode {
-        case .tab(id): mode = .tab(neighbor)
-        case .overview(returnTo: id): mode = .overview(returnTo: neighbor)
-        case .tab, .overview: break
+        case .tab(id):
+            mode = .tab(neighbor)
+        case .tab:
+            break
+        case .overview(let returnTo, let selected):
+            mode = .overview(
+                returnTo: returnTo == id ? neighbor : returnTo,
+                selected: selected?.tabID == id ? nil : selected
+            )
+        }
+        if !removed.pins.isEmpty {
+            overviewCamera = nil
         }
     }
 
@@ -135,6 +145,61 @@ nonisolated struct Browser: Hashable, Sendable {
         mode = .tab(id)
     }
 
+    // MARK: Pins
+
+    /// Adds a pin to the tab where its map was pressed. Returns nil when the tab does not exist.
+    @discardableResult
+    mutating func dropPin(at coordinate: Coordinate, in id: TabID, pinID: PinID = PinID()) -> Pin? {
+        guard let index = index(of: id) else { return nil }
+        overviewCamera = nil
+        return tabs[index].dropPin(at: coordinate, id: pinID)
+    }
+
+    /// Pins one of the places the tab shows. Returns nil and changes nothing when the tab does not show the place
+    /// or already has a pin for it. Another tab can pin the same place.
+    @discardableResult
+    mutating func pinPlace(_ placeID: PlaceID, in id: TabID, pinID: PinID = PinID()) -> Pin? {
+        guard let index = index(of: id), let pin = tabs[index].pinPlace(placeID, id: pinID) else { return nil }
+        overviewCamera = nil
+        return pin
+    }
+
+    /// Renames a pin. With `expected`, only while the pin still has that name.
+    mutating func renamePin(_ ref: PinRef, to name: String, ifStillNamed expected: String? = nil) {
+        update(ref.tabID) { $0.renamePin(ref.pinID, to: name, ifStillNamed: expected) }
+    }
+
+    /// Removes a pin. A tab that shows the pin's page goes back, and the overview no longer selects the pin.
+    mutating func removePin(_ ref: PinRef) {
+        guard let index = index(of: ref.tabID), tabs[index].removePin(ref.pinID) else { return }
+        overviewCamera = nil
+        if case .overview(let returnTo, ref) = mode {
+            mode = .overview(returnTo: returnTo)
+        }
+    }
+
+    /// Switches to the pin's tab and shows the pin's page there. Changes nothing when the pin does not exist.
+    mutating func openPin(_ ref: PinRef) {
+        guard let index = index(of: ref.tabID), tabs[index].openPin(ref.pinID) else { return }
+        mode = .tab(ref.tabID)
+    }
+
+    /// In the overview, selects the pin whose nearest spots are shown, or clears the selection with nil. The
+    /// overview stays on screen. Changes nothing outside the overview or for a pin that does not exist.
+    mutating func selectPinInOverview(_ ref: PinRef?) {
+        guard case .overview(let returnTo, _) = mode else { return }
+        if let ref, tab(ref.tabID)?.pins.contains(where: { $0.id == ref.pinID }) != true { return }
+        mode = .overview(returnTo: returnTo, selected: ref)
+    }
+
+    /// The pin the overview has selected, with its tab.
+    var selectedPin: (tab: MapTab, pin: Pin)? {
+        guard case .overview(_, let selected?) = mode, let tab = tab(selected.tabID),
+            let pin = tab.pins.first(where: { $0.id == selected.pinID })
+        else { return nil }
+        return (tab, pin)
+    }
+
     // MARK: Cameras
 
     mutating func setCamera(_ camera: CameraRegion, for scene: MapScene) {
@@ -155,10 +220,16 @@ nonisolated struct Browser: Hashable, Sendable {
 
     // MARK: Nearest
 
-    /// For the place the tab shows, the nearest place of every other tab that has results.
-    func nearestToViewedPlace(in id: TabID) -> [NearestMatch] {
-        guard let place = tab(id)?.viewedPlace else { return [] }
-        return nearestMatches(from: place, excluding: id, in: tabs)
+    /// For the place or the pin the tab shows, the nearest spot of every other tab that has pins or results.
+    func nearestToViewedSpot(in id: TabID) -> [NearestMatch] {
+        guard let spot = tab(id)?.viewedSpot else { return [] }
+        return nearestMatches(from: spot.coordinate, excluding: id, in: tabs)
+    }
+
+    /// For the pin the overview has selected, the nearest spot of every other tab that has pins or results.
+    func nearestToSelectedPin() -> [NearestMatch] {
+        guard let selected = selectedPin else { return [] }
+        return nearestMatches(from: selected.pin.coordinate, excluding: selected.tab.id, in: tabs)
     }
 
     private func index(of id: TabID) -> Int? {

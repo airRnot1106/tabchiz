@@ -2,36 +2,31 @@ import CoreLocation
 
 nonisolated struct NearestMatch: Hashable, Sendable {
     let tabID: TabID
-    let place: Place
+    let spot: Spot
     let distance: CLLocationDistance
 }
 
-/// The candidate with the shortest straight-line distance to `place`.
-nonisolated func nearestPlace(
-    to place: Place,
-    in candidates: [Place]
-) -> (place: Place, distance: CLLocationDistance)? {
-    nearestPlace(to: place.coordinate, in: candidates)
-}
-
-nonisolated func nearestPlace(
+/// The candidate with the shortest straight-line distance to `coordinate`. Of two equally near candidates the
+/// earlier one wins.
+nonisolated func nearestSpot(
     to coordinate: Coordinate,
-    in candidates: [Place]
-) -> (place: Place, distance: CLLocationDistance)? {
+    in candidates: [Spot]
+) -> (spot: Spot, distance: CLLocationDistance)? {
     candidates
-        .map { (place: $0, distance: coordinate.distance(to: $0.coordinate)) }
+        .map { (spot: $0, distance: coordinate.distance(to: $0.coordinate)) }
         .min { $0.distance < $1.distance }
 }
 
-/// The nearest place of each tab other than `viewedTab`, in tab order. Tabs without results are left out.
+/// The nearest spot of each tab other than `viewedTab`, in tab order: the nearest among the tab's pins and its
+/// loaded results together. Tabs with neither are left out.
 nonisolated func nearestMatches(
-    from place: Place,
+    from coordinate: Coordinate,
     excluding viewedTab: TabID,
     in tabs: [MapTab]
 ) -> [NearestMatch] {
     tabs.compactMap { tab in
-        guard tab.id != viewedTab, let nearest = nearestPlace(to: place, in: tab.places) else { return nil }
-        return NearestMatch(tabID: tab.id, place: nearest.place, distance: nearest.distance)
+        guard tab.id != viewedTab, let nearest = nearestSpot(to: coordinate, in: tab.spots) else { return nil }
+        return NearestMatch(tabID: tab.id, spot: nearest.spot, distance: nearest.distance)
     }
 }
 
