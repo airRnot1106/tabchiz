@@ -55,6 +55,34 @@ struct BrowserPinPagesTests {
         #expect(browser.activeTab.current == results)
     }
 
+    @Test func resultsThatArriveWhileAPinPageIsShownGoOnItsMapAndStayAfterBack() throws {
+        var (browser, ref) = try pinned()
+        browser.submit(LoadedBrowser.gym, in: ref.tabID)
+        let search = try #require(browser.tab(ref.tabID)?.current.page.search)
+        browser.openPin(ref)
+
+        browser.applySearch(.loaded(Samples.gyms), for: search, in: ref.tabID)
+
+        #expect(browser.activeTab.viewedPin?.id == ref.pinID)
+        #expect(browser.activeTab.places == Samples.gyms)
+
+        browser.back(in: ref.tabID)
+
+        #expect(browser.activeTab.current.page == .results(search, .loaded(Samples.gyms)))
+    }
+
+    @Test func aPinPageIgnoresResultsOfASearchItIsNotOver() throws {
+        var (browser, ref) = try pinned()
+        browser.submit(LoadedBrowser.gym, in: ref.tabID)
+        let stale = try #require(browser.tab(ref.tabID)?.current.page.search)
+        browser.submit(LoadedBrowser.supermarket, in: ref.tabID)
+        browser.openPin(ref)
+
+        browser.applySearch(.loaded(Samples.gyms), for: stale, in: ref.tabID)
+
+        #expect(browser.activeTab.places.isEmpty)
+    }
+
     @Test func openingAnotherPinReplacesThePinPageSoBackLeavesThePins() throws {
         var (browser, ref) = try pinned()
         let second = try browser.droppedPin(at: east, in: ref.tabID)

@@ -29,7 +29,7 @@ nonisolated struct PinPage: Hashable, Sendable {
     let pinID: PinID
     /// Nil when the pin was opened from a blank page.
     let search: Search?
-    let state: SearchState
+    fileprivate(set) var state: SearchState
 
     /// The page of `pinID` over what `page` shows.
     init(_ pinID: PinID, over page: Page) {
@@ -80,6 +80,20 @@ nonisolated enum Page: Hashable, Sendable {
 
     var pinID: PinID? {
         if case .pin(let shown) = self { shown.pinID } else { nil }
+    }
+
+    /// The page with `state` as the results of `search`, when the page is that search's results page or a pin page
+    /// over them. Nil for any other page.
+    func applying(_ state: SearchState, for search: Search) -> Page? {
+        switch self {
+        case .results(search, _):
+            return .results(search, state)
+        case .pin(var shown) where shown.search == search:
+            shown.state = state
+            return .pin(shown)
+        case .blank, .results, .place, .pin:
+            return nil
+        }
     }
 }
 

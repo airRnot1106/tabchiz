@@ -78,11 +78,17 @@ nonisolated struct MapTab: Hashable, Sendable, Identifiable {
         current.page = .results(Search(query: search.query, region: current.camera), .idle)
     }
 
-    /// Applies a search state only while the tab still shows the results page of that search. A late result for a
-    /// search the tab has since left is ignored.
+    /// Applies a search state only while the tab still shows that search, on its results page or on a pin page over
+    /// them. The pages in the history that show the same search get the state too, so back keeps the results.
+    /// A late result for a search the tab has since left is ignored.
     mutating func apply(_ state: SearchState, for search: Search) {
-        guard case .results(search, _) = current.page else { return }
-        current.page = .results(search, state)
+        guard let page = current.page.applying(state, for: search) else { return }
+        current.page = page
+        for index in backStack.indices {
+            if let page = backStack[index].page.applying(state, for: search) {
+                backStack[index].page = page
+            }
+        }
     }
 
     /// Shows the place page of one of the places on the map. From a results page or a pin page that page goes to
