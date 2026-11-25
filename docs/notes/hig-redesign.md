@@ -4,6 +4,12 @@ The main screen was redesigned to follow the iOS 26 Human Interface Guidelines a
 (Workspace, nearest place, five tabs, shared region, request budget) are unchanged. This note records what was off
 before, the two layouts compared in the real app, the choice, and the guideline behind each decision.
 
+> Superseded in part: the tab browser (`tab-prototype.md`) replaced the layer list described here. The sheet now holds
+> each tab's own pages instead of a list of layers with switches, a tab shows only its own places, and the overview
+> clusters each tab's places separately. The guidelines, the sheet detents, the markers, the muted map, the logo
+> placement and the tab colors below still describe the current app. Parts that no longer do are marked
+> "Superseded".
+
 HIG pages were read as JSON from `https://developer.apple.com/tutorials/data/design/human-interface-guidelines/<page>.json`.
 API names were checked against the iPhoneSimulator 26.5 SDK swiftinterface and MapKit headers.
 
@@ -81,13 +87,14 @@ A follows the guidelines below more closely and holds up at large text sizes. B 
   has a red tint and a white pin icon. You can change the tint to match the color scheme of your app."
 - The selected place uses MapKit's own selected marker (enlarged balloon). Maps: "Clearly identify elements that people
   select." Other places stay as translucent markers in the background.
-- Places of all tabs cluster together, so markers of different tabs no longer cover each other. Maps: "Cluster
-  overlapping points of interest to improve map legibility. ... As people zoom in on a map, clusters expand to
-  progressively reveal individual points of interest." A cluster takes the tab's color when all members belong to one
-  tab, and gray when they come from several.
-- Tapping a cluster zooms in until it splits. When its places are within 25 m, or the map already shows less than
-  150 m, the sheet lists the places instead and the person picks one. This fixes the wrong-place bug: a tap never lands
-  on one of several stacked markers.
+- Overlapping places cluster. Maps: "Cluster overlapping points of interest to improve map legibility. ... As people
+  zoom in on a map, clusters expand to progressively reveal individual points of interest." Superseded: the layer list
+  clustered the places of all tabs together, with gray clusters for mixed tabs. Now a tab shows only its own places,
+  and the overview clusters each tab's places separately, so every cluster has one tab's color.
+- Tapping a cluster in a tab zooms in until it splits, keeping at least about 120 m around close places. Places too
+  close to split stay one marker and are picked from the tab's results list. Tapping a cluster in the overview opens
+  that tab's results framed on the cluster's places. Superseded: the layer list instead listed the places in the sheet
+  when they were within 25 m or the map showed less than 150 m.
 - The map uses the muted emphasis style. Maps: "The muted style ... is great if you have a lot of information-rich
   content that you want to stand out against the map."
 - The Apple logo and legal link sit 10 pt above the collapsed sheet. Maps: "if your app lets people pull up a custom card
@@ -117,7 +124,7 @@ also has its own SF Symbol, following Color: "Avoid relying solely on color to d
 ## Not done
 
 - Rotation and the compass stay off (see above).
-- The overview at the default zoom shows several large gray clusters in the dense center. This is what clustering
-  across tabs costs. The per-tab color is visible again after one or two cluster taps, and the selection answers the
-  question regardless.
-- The fixture has no data for 薬局 and 公園, so the five-tab screenshot shows those layers with 0 results.
+- Superseded: the layer list showed several large gray clusters in the dense center at the default zoom, because it
+  clustered across tabs. The overview now clusters per tab and has no gray clusters.
+- The fixture has no data for 薬局 and 公園, so the five-tab screenshot of the layer list showed those layers with 0
+  results.
