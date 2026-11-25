@@ -1,0 +1,10 @@
+pre-commit:
+  piped: true
+  jobs:
+    - name: format
+      glob: "*.swift"
+      run: xcrun swift-format format --in-place {staged_files}
+      stage_fixed: true
+    - name: lint
+      glob: "*.swift"
+      run: xcrun swift-format lint --strict {staged_files} && swiftlint lint --strict --quiet {staged_files}
