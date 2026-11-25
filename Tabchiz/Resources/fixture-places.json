@@ -1,0 +1,533 @@
+{
+  "スーパー": [
+    {
+      "id": "fixture-supermarket-01",
+      "name": "テストスーパー01",
+      "lat": 35.668,
+      "lon": 139.714,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-02",
+      "name": "テストスーパー02",
+      "lat": 35.6699,
+      "lon": 139.714,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-03",
+      "name": "テストスーパー03",
+      "lat": 35.668,
+      "lon": 139.718,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-04",
+      "name": "テストスーパー04",
+      "lat": 35.668,
+      "lon": 139.722,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-05",
+      "name": "テストスーパー05",
+      "lat": 35.668,
+      "lon": 139.726,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-06",
+      "name": "テストスーパー06",
+      "lat": 35.668,
+      "lon": 139.73,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-07",
+      "name": "テストスーパー07",
+      "lat": 35.671,
+      "lon": 139.714,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-08",
+      "name": "テストスーパー08",
+      "lat": 35.671,
+      "lon": 139.718,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-09",
+      "name": "テストスーパー09",
+      "lat": 35.671,
+      "lon": 139.722,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-10",
+      "name": "テストスーパー10",
+      "lat": 35.671,
+      "lon": 139.726,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-11",
+      "name": "テストスーパー11",
+      "lat": 35.671,
+      "lon": 139.73,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-12",
+      "name": "テストスーパー12",
+      "lat": 35.674,
+      "lon": 139.714,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-13",
+      "name": "テストスーパー13",
+      "lat": 35.674,
+      "lon": 139.718,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-14",
+      "name": "テストスーパー14",
+      "lat": 35.674,
+      "lon": 139.722,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-15",
+      "name": "テストスーパー15",
+      "lat": 35.674,
+      "lon": 139.726,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-16",
+      "name": "テストスーパー16",
+      "lat": 35.674,
+      "lon": 139.73,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-17",
+      "name": "テストスーパー17",
+      "lat": 35.677,
+      "lon": 139.714,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-18",
+      "name": "テストスーパー18",
+      "lat": 35.677,
+      "lon": 139.718,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-19",
+      "name": "テストスーパー19",
+      "lat": 35.677,
+      "lon": 139.722,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-20",
+      "name": "テストスーパー20",
+      "lat": 35.677,
+      "lon": 139.726,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-21",
+      "name": "テストスーパー21",
+      "lat": 35.677,
+      "lon": 139.73,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-22",
+      "name": "テストスーパー22",
+      "lat": 35.68,
+      "lon": 139.714,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-23",
+      "name": "テストスーパー23",
+      "lat": 35.68,
+      "lon": 139.718,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-24",
+      "name": "テストスーパー24",
+      "lat": 35.68,
+      "lon": 139.722,
+      "category": "MKPOICategoryFoodMarket"
+    },
+    {
+      "id": "fixture-supermarket-25",
+      "name": "テストスーパー25",
+      "lat": 35.68,
+      "lon": 139.726,
+      "category": "MKPOICategoryFoodMarket"
+    }
+  ],
+  "ジム": [
+    {
+      "id": "fixture-gym-01",
+      "name": "テストジム01",
+      "lat": 35.6692,
+      "lon": 139.714,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-02",
+      "name": "テストジム02",
+      "lat": 35.6692,
+      "lon": 139.718,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-03",
+      "name": "テストジム03",
+      "lat": 35.6692,
+      "lon": 139.722,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-04",
+      "name": "テストジム04",
+      "lat": 35.6692,
+      "lon": 139.726,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-05",
+      "name": "テストジム05",
+      "lat": 35.6692,
+      "lon": 139.73,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-06",
+      "name": "テストジム06",
+      "lat": 35.6722,
+      "lon": 139.714,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-07",
+      "name": "テストジム07",
+      "lat": 35.6722,
+      "lon": 139.718,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-08",
+      "name": "テストジム08",
+      "lat": 35.6722,
+      "lon": 139.722,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-09",
+      "name": "テストジム09",
+      "lat": 35.6722,
+      "lon": 139.726,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-10",
+      "name": "テストジム10",
+      "lat": 35.6722,
+      "lon": 139.73,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-11",
+      "name": "テストジム11",
+      "lat": 35.6752,
+      "lon": 139.714,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-12",
+      "name": "テストジム12",
+      "lat": 35.6752,
+      "lon": 139.718,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-13",
+      "name": "テストジム13",
+      "lat": 35.6752,
+      "lon": 139.722,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-14",
+      "name": "テストジム14",
+      "lat": 35.6752,
+      "lon": 139.726,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-15",
+      "name": "テストジム15",
+      "lat": 35.6752,
+      "lon": 139.73,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-16",
+      "name": "テストジム16",
+      "lat": 35.6782,
+      "lon": 139.714,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-17",
+      "name": "テストジム17",
+      "lat": 35.6782,
+      "lon": 139.718,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-18",
+      "name": "テストジム18",
+      "lat": 35.6782,
+      "lon": 139.722,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-19",
+      "name": "テストジム19",
+      "lat": 35.6782,
+      "lon": 139.726,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-20",
+      "name": "テストジム20",
+      "lat": 35.6782,
+      "lon": 139.73,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-21",
+      "name": "テストジム21",
+      "lat": 35.6812,
+      "lon": 139.714,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-22",
+      "name": "テストジム22",
+      "lat": 35.6812,
+      "lon": 139.718,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-23",
+      "name": "テストジム23",
+      "lat": 35.6812,
+      "lon": 139.722,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-24",
+      "name": "テストジム24",
+      "lat": 35.6812,
+      "lon": 139.726,
+      "category": "MKPOICategoryFitnessCenter"
+    },
+    {
+      "id": "fixture-gym-25",
+      "name": "テストジム25",
+      "lat": 35.6812,
+      "lon": 139.73,
+      "category": "MKPOICategoryFitnessCenter"
+    }
+  ],
+  "カフェ": [
+    {
+      "id": "fixture-cafe-01",
+      "name": "テストカフェ01",
+      "lat": 35.6686,
+      "lon": 139.716,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-02",
+      "name": "テストカフェ02",
+      "lat": 35.6686,
+      "lon": 139.72,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-03",
+      "name": "テストカフェ03",
+      "lat": 35.6686,
+      "lon": 139.724,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-04",
+      "name": "テストカフェ04",
+      "lat": 35.6686,
+      "lon": 139.728,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-05",
+      "name": "テストカフェ05",
+      "lat": 35.6686,
+      "lon": 139.732,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-06",
+      "name": "テストカフェ06",
+      "lat": 35.6716,
+      "lon": 139.716,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-07",
+      "name": "テストカフェ07",
+      "lat": 35.6716,
+      "lon": 139.72,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-08",
+      "name": "テストカフェ08",
+      "lat": 35.6716,
+      "lon": 139.724,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-09",
+      "name": "テストカフェ09",
+      "lat": 35.6716,
+      "lon": 139.728,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-10",
+      "name": "テストカフェ10",
+      "lat": 35.6716,
+      "lon": 139.732,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-11",
+      "name": "テストカフェ11",
+      "lat": 35.6746,
+      "lon": 139.716,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-12",
+      "name": "テストカフェ12",
+      "lat": 35.6746,
+      "lon": 139.72,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-13",
+      "name": "テストカフェ13",
+      "lat": 35.6746,
+      "lon": 139.724,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-14",
+      "name": "テストカフェ14",
+      "lat": 35.6746,
+      "lon": 139.728,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-15",
+      "name": "テストカフェ15",
+      "lat": 35.6746,
+      "lon": 139.732,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-16",
+      "name": "テストカフェ16",
+      "lat": 35.6776,
+      "lon": 139.716,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-17",
+      "name": "テストカフェ17",
+      "lat": 35.6776,
+      "lon": 139.72,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-18",
+      "name": "テストカフェ18",
+      "lat": 35.6776,
+      "lon": 139.724,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-19",
+      "name": "テストカフェ19",
+      "lat": 35.6776,
+      "lon": 139.728,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-20",
+      "name": "テストカフェ20",
+      "lat": 35.6776,
+      "lon": 139.732,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-21",
+      "name": "テストカフェ21",
+      "lat": 35.6806,
+      "lon": 139.716,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-22",
+      "name": "テストカフェ22",
+      "lat": 35.6806,
+      "lon": 139.72,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-23",
+      "name": "テストカフェ23",
+      "lat": 35.6806,
+      "lon": 139.724,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-24",
+      "name": "テストカフェ24",
+      "lat": 35.6806,
+      "lon": 139.728,
+      "category": "MKPOICategoryCafe"
+    },
+    {
+      "id": "fixture-cafe-25",
+      "name": "テストカフェ25",
+      "lat": 35.6806,
+      "lon": 139.732,
+      "category": "MKPOICategoryCafe"
+    }
+  ]
+}
