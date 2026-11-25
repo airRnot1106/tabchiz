@@ -25,6 +25,8 @@ targets:
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: "YES"
         INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: 現在地の周辺を検索するために使います。
+        INFOPLIST_KEY_CFBundleDisplayName: Tabchiz
         TARGETED_DEVICE_FAMILY: "1"
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
@@ -39,12 +41,25 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.airrnot.tabchiz.tests
         GENERATE_INFOPLIST_FILE: "YES"
+  TabchizUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - TabchizUITests
+    dependencies:
+      - target: Tabchiz
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.airrnot.tabchiz.uitests
+        GENERATE_INFOPLIST_FILE: "YES"
 schemes:
   Tabchiz:
     build:
       targets:
         Tabchiz: all
         TabchizTests: [test]
+        TabchizUITests: [test]
     test:
       targets:
         - TabchizTests
+        - TabchizUITests
