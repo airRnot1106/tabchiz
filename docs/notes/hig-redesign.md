@@ -39,8 +39,9 @@ accessibility XXXL text. Both shared the new map layer: system balloon markers, 
 and a list to pick from when a cluster cannot be split.
 
 - A, Maps style: a nonmodal sheet that always rests over the map with detents collapsed (search field only), medium
-  and large. It holds the system search field, the tabs as a layer list with switches, the selected place with the
-  nearest place of each other tab, and the places of a cluster to pick from.
+  and large. It held the system search field, the tabs as a layer list with switches, the selected place with the
+  nearest place of each other tab, and the places of a cluster to pick from. Superseded: the sheet now holds the
+  current tab's pages (`tab-prototype.md`).
 - B, floating Liquid Glass: glass capsules for the tabs in a `GlassEffectContainer`, a glass add button, and a glass
   card at the bottom for the selection, over a full-screen map.
 
@@ -72,7 +73,8 @@ A follows the guidelines below more closely and holds up at large text sizes. B 
 - Materials: "Use Liquid Glass effects sparingly." and "Don't use Liquid Glass in the content layer."
   https://developer.apple.com/design/human-interface-guidelines/materials
   The sheet gets Liquid Glass from the system. The only custom glass is the "このエリアを検索" button
-  (`.buttonStyle(.glass)`). The off-screen indicators are informational, so they use `.regularMaterial`.
+  (`.buttonStyle(.glass)`). The overview legend is informational, so it uses `.regularMaterial`. Superseded: the
+  layer list also had off-screen indicators on `.regularMaterial`; the app no longer has them.
 - Color: "Apply color sparingly to the Liquid Glass material, and to symbols or text on the material."
   https://developer.apple.com/design/human-interface-guidelines/color
 - Searching: "If search is important, give it a primary position in your app or view."
@@ -102,7 +104,8 @@ A follows the guidelines below more closely and holds up at large text sizes. B 
   card." The medium sheet covers them, which the same section allows ("It's fine when parts of your interface
   temporarily cover the logo and link").
 - The map shows the system user-tracking button (`showsUserTrackingButton`) and the scale while zooming. Rotation stays
-  off because the off-screen indicators assume north is up, so the compass never appears.
+  off because a `CameraRegion` has no heading, so every map is north-up and the compass never appears. Superseded:
+  the layer list also kept rotation off because its off-screen indicators assumed north is up.
 
 ## Tab colors
 
