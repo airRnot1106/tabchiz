@@ -29,7 +29,13 @@ nonisolated enum Mode: Hashable, Sendable {
 nonisolated struct Browser: Hashable, Sendable {
     static let maxTabs = 5
 
-    private(set) var tabs: [MapTab]
+    private(set) var tabs: [MapTab] {
+        didSet {
+            if tabs.flatMap(\.places) != oldValue.flatMap(\.places) {
+                overviewCamera = nil
+            }
+        }
+    }
     private(set) var mode: Mode
     /// Where the overview map was left. Nil until the overview has been shown, and again after results change,
     /// so the overview then frames every place.
@@ -104,12 +110,7 @@ nonisolated struct Browser: Hashable, Sendable {
     }
 
     mutating func applySearch(_ state: SearchState, for search: Search, in id: TabID) {
-        guard let index = index(of: id) else { return }
-        let before = tabs[index].places
-        tabs[index].apply(state, for: search)
-        if tabs[index].places != before {
-            overviewCamera = nil
-        }
+        update(id) { $0.apply(state, for: search) }
     }
 
     mutating func openPlace(_ placeID: PlaceID, in id: TabID) {

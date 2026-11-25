@@ -181,4 +181,29 @@ struct BrowserTabsTests {
 
         #expect(browser.overviewCamera == nil)
     }
+
+    @Test func goingBackToEarlierResultsMakesTheOverviewFrameEveryPlaceAgain() throws {
+        let loaded = try LoadedBrowser()
+        var browser = loaded.browser
+        let supermarkets = loaded.supermarkets
+        try LoadedBrowser.load(&browser, SearchQuery(text: "カフェ"), Samples.cafes, in: supermarkets)
+        browser.showOverview()
+        browser.setCamera(southArea, for: .overview)
+
+        browser.back(in: supermarkets)
+
+        #expect(browser.tab(supermarkets)?.places == [Samples.market])
+        #expect(browser.overviewCamera == nil)
+    }
+
+    @Test func closingATabWithResultsMakesTheOverviewFrameEveryPlaceAgain() throws {
+        let loaded = try LoadedBrowser()
+        var browser = loaded.browser
+        browser.showOverview()
+        browser.setCamera(southArea, for: .overview)
+
+        browser.removeTab(loaded.gyms)
+
+        #expect(browser.overviewCamera == nil)
+    }
 }
