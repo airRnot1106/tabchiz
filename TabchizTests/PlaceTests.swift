@@ -46,4 +46,10 @@ struct PlaceTests {
         #expect(SearchQuery(text: "病院").category == nil)
         #expect(SearchQuery(text: "ラーメン").category == nil)
     }
+
+    @Test func colorsAreAssignedFirstFreeInPaletteOrder() {
+        #expect(TabColor.firstFree(excluding: []) == .orange)
+        #expect(TabColor.firstFree(excluding: [.orange, .bluishGreen]) == .skyBlue)
+        #expect(TabColor.firstFree(excluding: TabColor.allCases) == nil)
+    }
 }
