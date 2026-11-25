@@ -1,28 +1,37 @@
 import SwiftUI
 
 /// The tabs at the bottom of the sheet: a color dot and a name each, one tap to switch. The strip scrolls when the
-/// tabs do not fit.
+/// tabs do not fit, and the overview item stays in place next to it.
 struct TabBar: View {
     static let height: CGFloat = 60
 
     let store: BrowserStore
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal) {
-                HStack(spacing: 8) {
-                    ForEach(Array(store.browser.tabs.enumerated()), id: \.element.id) { index, tab in
-                        tabItem(tab, index: index)
-                            .id(tab.id)
+        HStack(spacing: 0) {
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal) {
+                    HStack(spacing: 8) {
+                        ForEach(Array(store.browser.tabs.enumerated()), id: \.element.id) { index, tab in
+                            tabItem(tab, index: index)
+                                .id(tab.id)
+                        }
                     }
-                    newTabButton
+                    .padding(.leading, 16)
+                    .padding(.trailing, 8)
                 }
-                .padding(.horizontal, 16)
+                .scrollIndicators(.hidden)
+                // The bar leaves the screen while a query is typed, and comes back on the tab on screen.
+                .onAppear { proxy.scrollTo(store.browser.mode.tabID) }
+                .onChange(of: store.browser.mode.tabID) { _, id in
+                    withAnimation { proxy.scrollTo(id) }
+                }
             }
-            .scrollIndicators(.hidden)
-            .onChange(of: store.browser.mode.tabID) { _, id in
-                withAnimation { proxy.scrollTo(id) }
-            }
+            Divider()
+                .frame(height: 28)
+            overviewItem
+                .padding(.leading, 8)
+                .padding(.trailing, 16)
         }
         .frame(height: Self.height)
         // The bar keeps its height, like a system tab bar.
@@ -63,20 +72,28 @@ struct TabBar: View {
         }
     }
 
-    private var newTabButton: some View {
-        Button {
-            store.addTab()
+    /// One tap enters the overview. Another tap, or a tap on a tab, leaves it.
+    private var overviewItem: some View {
+        let isOnScreen = store.browser.mode.scene == .overview
+        return Button {
+            store.toggleOverview()
         } label: {
-            Image(systemName: "plus")
-                .font(.body.weight(.semibold))
-                .frame(width: 44, height: 44)
-                .background(.fill.tertiary, in: Circle())
-                .contentShape(Circle())
+            HStack(spacing: 6) {
+                Image(systemName: "square.3.layers.3d")
+                    .font(.footnote)
+                Text("全体")
+                    .font(.subheadline.weight(isOnScreen ? .semibold : .regular))
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .padding(.horizontal, 14)
+            .frame(height: 44)
+            .background(isOnScreen ? AnyShapeStyle(.fill) : AnyShapeStyle(.fill.tertiary), in: Capsule())
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .disabled(!store.browser.canAddTab)
-        .opacity(store.browser.canAddTab ? 1 : 0.4)
-        .accessibilityLabel(store.browser.canAddTab ? "新規タブ" : "タブは\(Browser.maxTabs)個までです")
-        .accessibilityIdentifier("newTabButton")
+        .accessibilityLabel("全体")
+        .accessibilityAddTraits(isOnScreen ? .isSelected : [])
+        .accessibilityIdentifier("overviewTab")
     }
 }

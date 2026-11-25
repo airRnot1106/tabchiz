@@ -80,4 +80,88 @@ nonisolated final class TabSwitchingUITests: XCTestCase {
         app.waitForResults("25件")
         XCTAssertTrue(app.tab(1).isSelected)
     }
+
+    @MainActor
+    func testEnteringTheOverviewAndReturning() {
+        let app = BrowserApp.launch(seeding: ["スーパー", "ジム"])
+        app.waitForResults("25件")
+        app.tab(1).tap()
+        XCTAssertTrue(app.tab(1).isSelected)
+
+        app.overviewTab.tap()
+
+        XCTAssertTrue(app.overviewLegend.waitForExistence(timeout: 5))
+        XCTAssertEqual(app.overviewLegend.label, "凡例 スーパー、ジム")
+        XCTAssertEqual(app.overviewSummary.label, "2タブ・50件")
+        XCTAssertTrue(app.overviewTab.isSelected)
+        XCTAssertFalse(app.tab(0).isSelected)
+        XCTAssertFalse(app.tab(1).isSelected)
+        XCTAssertFalse(app.searchField.exists)
+        XCTAssertEqual(app.pinsAndClusters.count, 0)
+
+        app.overviewTab.tap()
+
+        XCTAssertTrue(app.searchField.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.tab(1).isSelected)
+        XCTAssertEqual(app.searchField.value as? String, "ジム")
+
+        app.overviewTab.tap()
+        XCTAssertTrue(app.overviewLegend.waitForExistence(timeout: 5))
+        app.tab(0).tap()
+
+        XCTAssertTrue(app.searchField.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.tab(0).isSelected)
+        XCTAssertEqual(app.searchField.value as? String, "スーパー")
+        XCTAssertFalse(app.overviewLegend.exists)
+    }
+
+    @MainActor
+    func testTappingADotInTheOverviewOpensThatPlaceInItsTab() throws {
+        let app = BrowserApp.launch(seeding: ["スーパー", "ジム"])
+        app.waitForResults("25件")
+        app.overviewTab.tap()
+        XCTAssertTrue(app.overviewLegend.waitForExistence(timeout: 5))
+        // The overview map settles on every place before its dots are read.
+        sleep(2)
+        let dot = try XCTUnwrap(app.uncoveredOverviewDot(ofTab: 1), "No ジム dot stands alone in the overview")
+        let label = dot.label
+        XCTAssertTrue(label.hasPrefix("ジム "))
+
+        dot.tap()
+
+        XCTAssertTrue(app.placeTitle.waitForExistence(timeout: 5))
+        XCTAssertEqual("ジム \(app.placeTitle.label)", label)
+        XCTAssertTrue(app.tab(1).isSelected)
+        XCTAssertFalse(app.overviewTab.isSelected)
+        XCTAssertEqual(app.searchField.value as? String, "ジム")
+
+        app.backButton.tap()
+
+        app.waitForResults("25件")
+        XCTAssertTrue(app.tab(1).isSelected)
+        XCTAssertFalse(app.placeTitle.exists)
+    }
+
+    @MainActor
+    func testTappingABubbleInTheOverviewShowsItsResultsWithTheMapInView() {
+        let app = BrowserApp.launch(seeding: ["スーパー", "ジム"])
+        app.waitForResults("25件")
+        app.tab(1).tap()
+        app.waitForResults("25件")
+        let summary = app.app.descendants(matching: .any)["resultsSummary"]
+        app.raiseSheet()
+        XCTAssertLessThan(summary.frame.minY, app.app.frame.height / 3, "The sheet does not reach full height")
+        app.overviewTab.tap()
+        XCTAssertTrue(app.overviewLegend.waitForExistence(timeout: 5))
+        // The overview map settles on every place before its bubbles are read.
+        sleep(2)
+        let cluster = app.overviewCluster(ofTab: 0)
+        XCTAssertTrue(cluster.exists, "No スーパー bubble in the overview")
+
+        cluster.tap()
+
+        app.waitForResults("25件")
+        XCTAssertTrue(app.tab(0).isSelected)
+        XCTAssertGreaterThan(summary.frame.minY, app.app.frame.height / 3, "The results list covers the map")
+    }
 }

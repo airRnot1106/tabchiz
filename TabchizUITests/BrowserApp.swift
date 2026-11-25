@@ -21,6 +21,10 @@ struct BrowserApp {
     var backButton: XCUIElement { app.buttons["backButton"] }
     var placeTitle: XCUIElement { app.staticTexts["placeTitle"] }
 
+    var overviewTab: XCUIElement { app.buttons["overviewTab"] }
+    var overviewLegend: XCUIElement { app.descendants(matching: .any)["overviewLegend"] }
+    var overviewSummary: XCUIElement { app.staticTexts["overviewSummary"] }
+
     /// The tab's item in the bar.
     func tab(_ index: Int) -> XCUIElement {
         app.buttons["tab.\(index)"]
@@ -39,6 +43,41 @@ struct BrowserApp {
     /// A row of the results list on screen, by the place's name.
     func placeRow(_ name: String) -> XCUIElement {
         app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'place.' AND label == %@", name)).firstMatch
+    }
+
+    /// The bubble of the tab's places that overlap in the overview.
+    func overviewCluster(ofTab index: Int) -> XCUIElement {
+        app.descendants(matching: .any)["overviewCluster.\(index)"]
+    }
+
+    /// Drags the sheet up to its full height.
+    func raiseSheet() {
+        let summary = app.descendants(matching: .any)["resultsSummary"]
+        let above = summary.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 0, dy: -60))
+        above.press(forDuration: 0.1, thenDragTo: above.withOffset(CGVector(dx: 0, dy: -700)))
+    }
+
+    /// A dot of the tab in the overview that no other marker and no control covers, so a tap lands on it.
+    func uncoveredOverviewDot(ofTab index: Int) -> XCUIElement? {
+        let markers = app.descendants(matching: .any)
+            .matching(
+                NSPredicate(format: "identifier BEGINSWITH 'overviewPin.' OR identifier BEGINSWITH 'overviewCluster.'")
+            )
+            .allElementsBoundByIndex
+        let frames = markers.map { (identifier: $0.identifier, frame: $0.frame) }
+        let clear = CGRect(
+            x: 0,
+            y: overviewLegend.frame.maxY,
+            width: app.frame.width,
+            height: overviewSummary.frame.minY - 40 - overviewLegend.frame.maxY
+        )
+        return markers.first { dot in
+            let frame = dot.frame
+            return dot.identifier.hasPrefix("overviewPin.\(index).") && clear.contains(frame)
+                && frames.allSatisfy {
+                    $0.identifier == dot.identifier || !$0.frame.intersects(frame.insetBy(dx: -6, dy: -6))
+                }
+        }
     }
 
     /// Waits until the results page on screen reports `summary`, such as "25件".
