@@ -2,10 +2,10 @@ import MapKit
 
 /// Searches Apple Maps points of interest inside the region. MapKit returns at most 25 results per request.
 nonisolated struct MapKitPlaceSearcher: PlaceSearcher {
-    func search(_ query: SearchQuery, region: MKCoordinateRegion) async throws -> [Place] {
+    func search(_ query: SearchQuery, region: CameraRegion) async throws -> [Place] {
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = query.text
-        request.region = region
+        request.region = region.mkRegion
         request.resultTypes = .pointOfInterest
         request.regionPriority = .required
         if let category = query.category {

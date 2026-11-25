@@ -32,7 +32,7 @@ nonisolated struct FixturePlaceSearcher: PlaceSearcher {
         self.init(placesByQuery: items.mapValues { $0.map(Self.place(from:)) })
     }
 
-    func search(_ query: SearchQuery, region: MKCoordinateRegion) async throws -> [Place] {
+    func search(_ query: SearchQuery, region: CameraRegion) async throws -> [Place] {
         placesByQuery[query.text] ?? []
     }
 

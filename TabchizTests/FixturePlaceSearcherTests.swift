@@ -1,4 +1,3 @@
-import MapKit
 import Testing
 
 @testable import Tabchiz
@@ -7,7 +6,7 @@ struct FixturePlaceSearcherTests {
     @Test func bundledSupermarketsAreTheInventedGrid() async throws {
         let places = try await FixturePlaceSearcher().search(
             SearchQuery(text: "スーパー"),
-            region: CameraRegion.defaultArea.mkRegion
+            region: .defaultArea
         )
 
         #expect(places.count == 25)
@@ -18,7 +17,7 @@ struct FixturePlaceSearcherTests {
     @Test func everyPresetTheUITestsUseHasTwentyFivePlaces() async throws {
         let searcher = FixturePlaceSearcher()
         for text in ["スーパー", "ジム", "カフェ"] {
-            let places = try await searcher.search(SearchQuery(text: text), region: CameraRegion.defaultArea.mkRegion)
+            let places = try await searcher.search(SearchQuery(text: text), region: .defaultArea)
             #expect(places.count == 25)
             #expect(places.dedupedByID().count == 25)
         }
@@ -28,7 +27,7 @@ struct FixturePlaceSearcherTests {
     /// テストスーパー02 is 0.0007 degrees north of テストジム01: 77.84 m.
     @Test func theNearestPairsTheUITestsReadHaveHandCheckedDistances() async throws {
         let searcher = FixturePlaceSearcher()
-        let region = CameraRegion.defaultArea.mkRegion
+        let region = CameraRegion.defaultArea
         let supermarkets = try await searcher.search(SearchQuery(text: "スーパー"), region: region)
         let gyms = try await searcher.search(SearchQuery(text: "ジム"), region: region)
         let first = try #require(supermarkets.first)
@@ -46,7 +45,7 @@ struct FixturePlaceSearcherTests {
     @Test func queriesWithoutASnapshotFindNothing() async throws {
         let places = try await FixturePlaceSearcher().search(
             SearchQuery(text: "ラーメン"),
-            region: CameraRegion.defaultArea.mkRegion
+            region: .defaultArea
         )
 
         #expect(places.isEmpty)

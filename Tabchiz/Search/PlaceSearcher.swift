@@ -1,7 +1,7 @@
-import MapKit
+import Foundation
 
 nonisolated protocol PlaceSearcher: Sendable {
-    func search(_ query: SearchQuery, region: MKCoordinateRegion) async throws -> [Place]
+    func search(_ query: SearchQuery, region: CameraRegion) async throws -> [Place]
 }
 
 nonisolated enum PlaceSearchError: Error, Equatable {
