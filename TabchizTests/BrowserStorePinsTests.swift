@@ -174,6 +174,27 @@ struct BrowserStorePinsTests {
 
     // MARK: Cameras
 
+    @Test func goingBackToAPinPageOverASearchThatNeverLoadedSearchesItAgain() async throws {
+        let slow = StubSearcher(
+            results: ["スーパー": [Samples.market], "ジム": Samples.gyms],
+            delays: ["スーパー": .milliseconds(100)]
+        )
+        let store = BrowserStore(searcher: slow, namer: StubNamer(), storage: MemoryStorage())
+        let id = store.browser.activeTab.id
+        let dropped = store.dropPin(at: west, in: id)
+        let pin = try #require(dropped)
+        store.submit(LoadedBrowser.supermarket, in: id)
+        store.openPin(PinRef(tabID: id, pinID: pin.id))
+        store.submit(LoadedBrowser.gym, in: id)
+        await store.waitForSearches()
+
+        store.back(in: id)
+        await store.waitForSearches()
+
+        #expect(store.browser.activeTab.viewedPin?.id == pin.id)
+        #expect(store.browser.activeTab.places == [Samples.market])
+    }
+
     @Test func openingAPinFramesItWithTheNearestSpotOfEachOtherTab() async throws {
         let (store, pin) = try await storeWithAPinAndTwoSearches()
 

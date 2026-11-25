@@ -78,6 +78,25 @@ nonisolated enum Page: Hashable, Sendable {
         }
     }
 
+    /// The state of the page's search. Nil for a page without a search.
+    var searchState: SearchState? {
+        switch self {
+        case .blank: nil
+        case .results(_, let state): state
+        case .place(let shown): .loaded(shown.places)
+        case .pin(let shown): shown.search == nil ? nil : shown.state
+        }
+    }
+
+    /// The search whose results the page still waits for, on its results page or on a pin page over them.
+    var pendingSearch: Search? {
+        guard let search, let searchState else { return nil }
+        switch searchState {
+        case .idle, .searching, .throttled: return search
+        case .loaded, .failed: return nil
+        }
+    }
+
     var pinID: PinID? {
         if case .pin(let shown) = self { shown.pinID } else { nil }
     }

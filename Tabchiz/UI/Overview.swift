@@ -69,22 +69,18 @@ struct OverviewPage: View {
 
     private func caption(_ tab: MapTab) -> String {
         let pins = tab.pins.isEmpty ? nil : "ピン \(tab.pins.count)個"
-        return [results(tab), pins].compactMap(\.self).joined(separator: "・")
+        return [Self.results(tab), pins].compactMap(\.self).joined(separator: "・")
     }
 
-    /// What the tab's search found. Nil for a tab that has pins and no search.
-    private func results(_ tab: MapTab) -> String? {
-        switch tab.current.page {
-        case .results(_, .idle), .results(_, .searching): "検索中…"
-        case .results(_, .throttled): "再検索を待っています"
-        case .results(_, .failed): "検索できませんでした"
-        case .results(_, .loaded), .place: "\(tab.places.count)件"
-        case .blank, .pin:
-            if tab.query == nil {
-                tab.pins.isEmpty ? "未検索" : nil
-            } else {
-                "\(tab.places.count)件"
-            }
+    /// What the tab's search found, in the same words on its results page and on a pin page over them. Nil for a
+    /// tab that has pins and no search.
+    static func results(_ tab: MapTab) -> String? {
+        switch tab.current.page.searchState {
+        case nil: tab.pins.isEmpty ? "未検索" : nil
+        case .idle, .searching: "検索中…"
+        case .throttled: "再検索を待っています"
+        case .failed: "検索できませんでした"
+        case .loaded(let places): "\(places.count)件"
         }
     }
 }

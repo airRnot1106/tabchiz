@@ -225,26 +225,21 @@ final class BrowserStore {
 
     // MARK: Searching
 
-    /// Cancels the search of every tab that no longer shows its results page, and starts one for every results
-    /// page that still waits for results. Each tab keeps its own task.
+    /// Cancels the search of every tab that no longer shows that search, and starts one for every page that still
+    /// waits for the results of its search: a results page or a pin page over them. Each tab keeps its own task.
     private func syncSearches() {
         for (id, running) in searches where browser.tab(id)?.current.page.search != running.search {
             running.task.cancel()
             searches[id] = nil
         }
         for tab in browser.tabs where searches[tab.id] == nil {
-            guard case .results(let search, let state) = tab.current.page else { continue }
-            switch state {
-            case .idle, .searching, .throttled:
-                let id = tab.id
-                nextSearchToken += 1
-                let token = nextSearchToken
-                browser.applySearch(.searching, for: search, in: id)
-                let task = Task { await self.run(search, for: id, token: token) }
-                searches[id] = RunningSearch(token: token, search: search, task: task)
-            case .loaded, .failed:
-                break
-            }
+            guard let search = tab.current.page.pendingSearch else { continue }
+            let id = tab.id
+            nextSearchToken += 1
+            let token = nextSearchToken
+            browser.applySearch(.searching, for: search, in: id)
+            let task = Task { await self.run(search, for: id, token: token) }
+            searches[id] = RunningSearch(token: token, search: search, task: task)
         }
     }
 
