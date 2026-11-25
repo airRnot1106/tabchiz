@@ -2,8 +2,9 @@ name: Tabchiz
 options:
   bundleIdPrefix: dev.airrnot
   deploymentTarget:
-    iOS: "18.0"
+    iOS: "26.0"
   createIntermediateGroups: true
+  developmentLanguage: ja
 settings:
   base:
     SWIFT_VERSION: "6.0"
