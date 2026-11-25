@@ -1,7 +1,7 @@
 PROJECT := Tabchiz.xcodeproj
 SCHEME := Tabchiz
 SIMULATOR := platform=iOS Simulator,name=iPhone 17
-SOURCES := Tabchiz TabchizTests
+SOURCES := Tabchiz TabchizTests TabchizUITests
 XCODEBUILD := xcodebuild -project $(PROJECT) -scheme $(SCHEME) -derivedDataPath build -quiet
 
 .PHONY: generate build test lint format clean

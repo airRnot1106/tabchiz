@@ -1,6 +1,7 @@
 included:
   - Tabchiz
   - TabchizTests
+  - TabchizUITests
 
 # swift-format owns layout, so rules that would contradict its output stay off.
 disabled_rules:
