@@ -21,6 +21,12 @@
             pkgs.swiftlint
             pkgs.xcodegen
           ];
+          # lefthook install is idempotent; stdout is discarded so `nix develop --command` output stays clean.
+          shellHook = ''
+            if git rev-parse --git-dir > /dev/null 2>&1; then
+              lefthook install > /dev/null
+            fi
+          '';
         };
       });
     };
