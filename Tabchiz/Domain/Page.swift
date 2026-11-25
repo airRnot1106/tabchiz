@@ -22,18 +22,49 @@ nonisolated struct PlacePage: Hashable, Sendable {
     }
 }
 
+/// A pin together with the search the tab showed when the pin was opened, so the map keeps showing those results.
+/// The page holds only the pin's ID. `MapTab` drops every pin page of a pin it removes, so the ID always names one
+/// of the tab's pins.
+nonisolated struct PinPage: Hashable, Sendable {
+    let pinID: PinID
+    /// Nil when the pin was opened from a blank page.
+    let search: Search?
+    let state: SearchState
+
+    /// The page of `pinID` over what `page` shows.
+    init(_ pinID: PinID, over page: Page) {
+        self.pinID = pinID
+        switch page {
+        case .blank:
+            search = nil
+            state = .idle
+        case .results(let search, let state):
+            self.search = search
+            self.state = state
+        case .place(let shown):
+            search = shown.search
+            state = .loaded(shown.places)
+        case .pin(let shown):
+            search = shown.search
+            state = shown.state
+        }
+    }
+}
+
 /// What a tab shows.
 nonisolated enum Page: Hashable, Sendable {
     /// A new tab that has not searched yet.
     case blank
     case results(Search, SearchState)
     case place(PlacePage)
+    case pin(PinPage)
 
     var search: Search? {
         switch self {
         case .blank: nil
         case .results(let search, _): search
         case .place(let shown): shown.search
+        case .pin(let shown): shown.search
         }
     }
 
@@ -43,7 +74,12 @@ nonisolated enum Page: Hashable, Sendable {
         case .blank: []
         case .results(_, let state): state.places
         case .place(let shown): shown.places
+        case .pin(let shown): shown.state.places
         }
+    }
+
+    var pinID: PinID? {
+        if case .pin(let shown) = self { shown.pinID } else { nil }
     }
 }
 

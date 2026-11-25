@@ -35,14 +35,22 @@ struct RootView: View {
                     showsUserLocation: showsUserLocation,
                     controlInsets: UIEdgeInsets(insets.controls),
                     obscuredInsets: UIEdgeInsets(insets.obscured),
-                    onOpen: { placeID, tabID in
+                    onOpen: { spot, tabID in
                         showMap()
-                        store.openPlace(placeID, in: tabID)
+                        store.open(spot, in: tabID)
                     },
-                    onJump: { placeID, tabID in
+                    onJump: { spot, tabID in
                         showMap()
-                        store.jump(to: placeID, in: tabID)
+                        store.jump(to: spot, in: tabID)
                     },
+                    onSelectPin: { ref in
+                        // The pin's nearest spots show in the sheet, which rests low in the overview.
+                        if ref != nil && overviewDetent == .collapsed {
+                            overviewDetent = .medium
+                        }
+                        store.selectPinInOverview(ref)
+                    },
+                    onDropPin: { store.dropPin(at: $0, in: store.browser.activeTab.id) },
                     onJumpToCluster: { coordinates, tabID in
                         showMap()
                         store.jumpToResults(framing: coordinates, in: tabID)
@@ -118,6 +126,7 @@ extension UIEdgeInsets {
 #Preview {
     let store = BrowserStore(
         searcher: FixturePlaceSearcher(),
+        namer: FixturePinNamer(),
         storage: UserDefaultsTabStorage(defaults: UserDefaults(suiteName: "preview") ?? .standard)
     )
     store.submit(SearchQuery(text: "スーパー"), in: store.browser.activeTab.id)

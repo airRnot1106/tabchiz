@@ -14,7 +14,7 @@ struct BrowserStoreCameraTests {
 
     /// A store with a loaded スーパー tab and a loaded ジム tab, showing the ジム tab.
     private func storeWithTwoTabs() async throws -> (store: BrowserStore, gyms: TabID) {
-        let store = BrowserStore(searcher: searcher, storage: MemoryStorage())
+        let store = BrowserStore(searcher: searcher, namer: StubNamer(), storage: MemoryStorage())
         store.submit(LoadedBrowser.supermarket, in: store.browser.activeTab.id)
         let gyms = try #require(store.addTab())
         store.submit(LoadedBrowser.gym, in: gyms)
@@ -34,7 +34,7 @@ struct BrowserStoreCameraTests {
             store.cameraCommand?.target
                 == .fit([Samples.market.coordinate, Samples.nearGym.coordinate])
         )
-        #expect(store.browser.nearestToViewedPlace(in: supermarkets).map(\.tabID) == [gyms])
+        #expect(store.browser.nearestToViewedSpot(in: supermarkets).map(\.tabID) == [gyms])
     }
 
     @Test func goingBackMovesTheMapToThePreviousPagesCamera() async throws {

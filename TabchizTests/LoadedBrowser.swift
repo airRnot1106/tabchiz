@@ -42,3 +42,17 @@ struct LoadedBrowser {
         browser.applySearch(.loaded(places), for: search, in: id)
     }
 }
+
+extension Browser {
+    /// Drops a pin in the tab and returns it.
+    mutating func droppedPin(at coordinate: Coordinate, in id: TabID) throws -> Pin {
+        let pin = dropPin(at: coordinate, in: id)
+        return try #require(pin)
+    }
+
+    /// Pins a place the tab shows and returns the pin.
+    mutating func pinnedPlace(_ placeID: PlaceID, in id: TabID) throws -> Pin {
+        let pin = pinPlace(placeID, in: id)
+        return try #require(pin)
+    }
+}

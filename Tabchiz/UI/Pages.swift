@@ -1,56 +1,62 @@
 import SwiftUI
 
-/// A place with its tab's mark, an optional caption under its name and an optional distance at the trailing edge.
-/// At accessibility text sizes the distance moves under the name so the name is not truncated.
+/// A place with its tab's mark, or a pin with the pin mark in its tab's color. An optional caption and an
+/// optional straight-line distance show under the name, so the name keeps the row's width and two rows of nearest
+/// spots fit in the half-height sheet.
 struct PlaceRow: View {
     let tab: MapTab
     let name: String
     var caption: String?
     var distance: Double?
-
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    var isPin = false
 
     var body: some View {
         HStack(spacing: 12) {
-            TabSymbol(tab: tab)
+            SpotSymbol(systemName: isPin ? "mappin" : tab.symbolName, color: tab.color)
             VStack(alignment: .leading, spacing: 2) {
                 Text(name)
                     .font(.body)
                     .foregroundStyle(.primary)
-                if let caption {
-                    Text(caption)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                if dynamicTypeSize.isAccessibilitySize, let distance {
-                    distanceText(distance)
+                if caption != nil || distance != nil {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 8) { details }
+                        VStack(alignment: .leading, spacing: 2) { details }
+                    }
                 }
             }
             Spacer(minLength: 8)
-            if !dynamicTypeSize.isAccessibilitySize, let distance {
-                distanceText(distance)
-            }
         }
         .accessibilityElement(children: .combine)
     }
 
-    private func distanceText(_ distance: Double) -> some View {
-        Text(DistanceText.straightLine(distance))
-            .font(.subheadline.weight(.semibold))
-            .monospacedDigit()
-            .foregroundStyle(.secondary)
+    @ViewBuilder private var details: some View {
+        if let caption {
+            Text(caption)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        if let distance {
+            Text(DistanceText.straightLine(distance))
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(.primary)
+        }
     }
 }
 
-/// The results page of a tab: its places as a list, or why there is none yet.
+/// The results page of a tab: its pins, then its places as a list, or why there is none yet. A place is pinned
+/// or unpinned from its row by a swipe or its context menu.
 struct ResultsPage: View {
     let tab: MapTab
     let state: SearchState
+    let pins: PinsSection
     let onOpen: (Place) -> Void
+    let onTogglePin: (Place) -> Void
     let onRetry: () -> Void
 
     var body: some View {
         List {
+            pins
             switch state {
             case .idle, .searching:
                 HStack(spacing: 12) {
@@ -63,13 +69,7 @@ struct ResultsPage: View {
             case .loaded(let places):
                 Section {
                     ForEach(places) { place in
-                        Button {
-                            onOpen(place)
-                        } label: {
-                            PlaceRow(tab: tab, name: place.name)
-                        }
-                        .tint(.primary)
-                        .accessibilityIdentifier("place.\(place.id.rawValue)")
+                        row(place)
                     }
                 } header: {
                     Text("\(places.count)件")
@@ -96,29 +96,49 @@ struct ResultsPage: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
     }
+
+    private func row(_ place: Place) -> some View {
+        let isPinned = tab.pin(for: place.id) != nil
+        return Button {
+            onOpen(place)
+        } label: {
+            HStack(spacing: 8) {
+                PlaceRow(tab: tab, name: place.name)
+                if isPinned {
+                    Image(systemName: "pin.fill")
+                        .font(.footnote)
+                        .foregroundStyle(tab.color.color)
+                        .accessibilityHidden(true)
+                }
+            }
+        }
+        .tint(.primary)
+        .accessibilityValue(isPinned ? "ピン済み" : "")
+        .accessibilityIdentifier("place.\(place.id.rawValue)")
+        .swipeActions(edge: .trailing) {
+            PinToggle(isPinned: isPinned) { onTogglePin(place) }
+                .tint(tab.color.color)
+        }
+        .contextMenu {
+            PinToggle(isPinned: isPinned) { onTogglePin(place) }
+        }
+    }
 }
 
-/// The place page of a tab: the place, and for every other tab that has results its nearest place with the
-/// straight-line distance. Picking one shows it in its own tab.
+/// The place page of a tab: the place, a button that pins or unpins it, and for every other tab its nearest spot
+/// with the straight-line distance.
 struct PlacePageView: View {
-    struct Nearest: Identifiable {
-        let tab: MapTab
-        let place: Place
-        let distance: Double
-
-        var id: TabID { tab.id }
-    }
-
     let tab: MapTab
     let place: Place
-    let nearest: [Nearest]
-    let onJump: (Nearest) -> Void
+    let nearest: [NearestEntry]
+    let onTogglePin: () -> Void
+    let onJump: (NearestEntry) -> Void
 
     var body: some View {
         List {
             Section {
                 HStack(spacing: 12) {
-                    TabSymbol(tab: tab)
+                    SpotSymbol(systemName: tab.symbolName, color: tab.color)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(place.name)
                             .font(.title3.weight(.semibold))
@@ -128,44 +148,30 @@ struct PlacePageView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                PinToggle(isPinned: tab.pin(for: place.id) != nil, action: onTogglePin)
             }
-            Section {
-                if nearest.isEmpty {
-                    Text("ほかのタブに検索結果がありません")
-                        .foregroundStyle(.secondary)
-                }
-                ForEach(nearest) { entry in
-                    Button {
-                        onJump(entry)
-                    } label: {
-                        PlaceRow(
-                            tab: entry.tab, name: entry.place.name, caption: entry.tab.title, distance: entry.distance)
-                    }
-                    .tint(.primary)
-                    .accessibilityIdentifier("nearest.\(entry.tab.title)")
-                }
-            } header: {
-                Text("ほかのタブで最も近い場所")
-            } footer: {
-                if !nearest.isEmpty {
-                    Text("選ぶと、そのタブでその場所を開きます。")
-                }
-            }
+            NearestSection(entries: nearest, onJump: onJump)
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
     }
 }
 
-/// The presets to search with one tap, and the typed text as a query of its own.
+/// The presets to search with one tap, and the typed text as a query of its own. A blank tab shows its pins above
+/// them.
 struct SearchSuggestions: View {
     let text: String
+    /// The tab's pins above the presets, on a blank tab.
+    var pins: PinsSection?
     let onPick: (SearchQuery) -> Void
 
     private var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
         List {
+            if let pins {
+                pins
+            }
             if !trimmed.isEmpty && SearchPreset.matching(trimmed) == nil {
                 Section {
                     Button {
@@ -193,7 +199,7 @@ struct SearchSuggestions: View {
             } header: {
                 Text("よく使う検索")
             } footer: {
-                Text("タブごとに別の地図で検索します。下のタブを長押しすると閉じられます。")
+                Text("タブごとに別の地図で検索します。地図を長押しするとピンを刺せます。下のタブを長押しすると閉じられます。")
             }
         }
         .listStyle(.insetGrouped)

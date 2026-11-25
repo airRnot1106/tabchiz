@@ -18,7 +18,7 @@ extension TabColor {
 }
 
 extension SearchQuery {
-    /// SF Symbol for a preset name. Free text gets a plain pin.
+    /// SF Symbol for a preset name. Free text gets the search symbol, because the pin symbol marks pins.
     var symbolName: String {
         switch text {
         case "スーパー": "cart.fill"
@@ -30,29 +30,30 @@ extension SearchQuery {
         case "公園": "tree.fill"
         case "本屋": "book.fill"
         case "レストラン": "fork.knife"
-        default: "mappin"
+        default: "magnifyingglass"
         }
     }
 }
 
 extension MapTab {
-    /// The tab's name: its query, or a placeholder while it is blank.
-    var title: String { query?.text ?? "新規タブ" }
+    /// The tab's name: its query, "ピン" while it has pins and no query, or a placeholder while it has neither.
+    var title: String { query?.text ?? (pins.isEmpty ? "新規タブ" : "ピン") }
 
-    var symbolName: String { query?.symbolName ?? "magnifyingglass" }
+    var symbolName: String { query?.symbolName ?? (pins.isEmpty ? "magnifyingglass" : "mappin") }
 }
 
-/// The tab's symbol on a circle of the tab's color, the same mark the tab's markers carry on the map.
-struct TabSymbol: View {
-    let tab: MapTab
+/// A symbol on a circle of a tab's color.
+struct SpotSymbol: View {
+    let systemName: String
+    let color: TabColor
     @ScaledMetric(relativeTo: .body) private var diameter: CGFloat = 30
 
     var body: some View {
-        Image(systemName: tab.symbolName)
+        Image(systemName: systemName)
             .font(.system(size: diameter * 0.45, weight: .semibold))
             .foregroundStyle(.white)
             .frame(width: diameter, height: diameter)
-            .background(tab.color.color.gradient, in: Circle())
+            .background(color.color.gradient, in: Circle())
             .accessibilityHidden(true)
     }
 }

@@ -19,7 +19,7 @@ struct BrowserStoreTests {
     // MARK: Searching
 
     @Test func submittingAQuerySearchesTheAreaOfThatTabsMap() async {
-        let store = BrowserStore(searcher: searcher, storage: MemoryStorage())
+        let store = BrowserStore(searcher: searcher, namer: StubNamer(), storage: MemoryStorage())
         let id = store.browser.activeTab.id
         store.cameraDidChange(southArea, in: .tab(id))
 
@@ -33,7 +33,7 @@ struct BrowserStoreTests {
     }
 
     @Test func eachTabSearchesItsOwnArea() async throws {
-        let store = BrowserStore(searcher: searcher, storage: MemoryStorage())
+        let store = BrowserStore(searcher: searcher, namer: StubNamer(), storage: MemoryStorage())
         let first = store.browser.activeTab.id
         let second = try #require(store.addTab())
         store.cameraDidChange(southArea, in: .tab(second))
@@ -52,7 +52,7 @@ struct BrowserStoreTests {
             results: ["スーパー": [Samples.market], "ジム": Samples.gyms],
             delays: ["スーパー": .milliseconds(300)]
         )
-        let store = BrowserStore(searcher: slow, storage: MemoryStorage())
+        let store = BrowserStore(searcher: slow, namer: StubNamer(), storage: MemoryStorage())
         let id = store.browser.activeTab.id
         store.submit(supermarket, in: id)
 
@@ -69,7 +69,7 @@ struct BrowserStoreTests {
             results: ["スーパー": [Samples.market], "ジム": Samples.gyms],
             delays: ["スーパー": .milliseconds(100)]
         )
-        let store = BrowserStore(searcher: slow, storage: MemoryStorage())
+        let store = BrowserStore(searcher: slow, namer: StubNamer(), storage: MemoryStorage())
         let id = store.browser.activeTab.id
         store.submit(supermarket, in: id)
         store.submit(gym, in: id)
@@ -85,7 +85,7 @@ struct BrowserStoreTests {
     @Test func aRemovedTabsSearchResultIsDropped() async throws {
         let slow = StubSearcher(results: ["ジム": Samples.gyms], delays: ["ジム": .milliseconds(200)])
         let storage = MemoryStorage()
-        let store = BrowserStore(searcher: slow, storage: storage)
+        let store = BrowserStore(searcher: slow, namer: StubNamer(), storage: storage)
         let first = store.browser.activeTab.id
         let second = try #require(store.addTab())
         store.submit(gym, in: second)
@@ -101,7 +101,7 @@ struct BrowserStoreTests {
 
     @Test func exhaustedBudgetWaitsAndThenSearchesByItself() async throws {
         let store = BrowserStore(
-            searcher: searcher,
+            searcher: searcher, namer: StubNamer(),
             storage: MemoryStorage(),
             budget: RequestBudget(limit: 1, window: 0.3)
         )
@@ -127,7 +127,8 @@ struct BrowserStoreTests {
     @Test func mapKitThrottlingWaitsForTheBackoffBeforeRetrying() async throws {
         let throttling = StubSearcher(results: ["カフェ": Samples.cafes], throttledCalls: 1)
         let clock = Mutex(Date())
-        let store = BrowserStore(searcher: throttling, storage: MemoryStorage(), now: { clock.withLock { $0 } })
+        let store = BrowserStore(
+            searcher: throttling, namer: StubNamer(), storage: MemoryStorage(), now: { clock.withLock { $0 } })
         let start = clock.withLock { $0 }
         let id = store.browser.activeTab.id
         store.submit(SearchQuery(text: "カフェ"), in: id)
@@ -144,7 +145,7 @@ struct BrowserStoreTests {
     }
 
     @Test func theSearchHereButtonAppearsOnlyAfterTheTabsMapLeftTheSearchedArea() async {
-        let store = BrowserStore(searcher: searcher, storage: MemoryStorage())
+        let store = BrowserStore(searcher: searcher, namer: StubNamer(), storage: MemoryStorage())
         let id = store.browser.activeTab.id
         #expect(!store.showsResearchButton)
 
@@ -165,7 +166,7 @@ struct BrowserStoreTests {
 
     @Test func tabsAreSavedWithTheirQueryAndColor() async throws {
         let storage = MemoryStorage()
-        let store = BrowserStore(searcher: searcher, storage: storage)
+        let store = BrowserStore(searcher: searcher, namer: StubNamer(), storage: storage)
         store.submit(gym, in: store.browser.activeTab.id)
         store.addTab()
 
@@ -180,7 +181,7 @@ struct BrowserStoreTests {
             SavedTab(query: nil, color: .orange),
             SavedTab(query: gym, color: .vermillion),
         ])
-        let store = BrowserStore(searcher: searcher, storage: storage)
+        let store = BrowserStore(searcher: searcher, namer: StubNamer(), storage: storage)
 
         await store.launch()
 
@@ -196,7 +197,7 @@ struct BrowserStoreTests {
         var around = CameraRegion.defaultArea
         around.center = user
         let storage = MemoryStorage([SavedTab(query: gym, color: .orange)])
-        let store = BrowserStore(searcher: searcher, storage: storage, locate: { user })
+        let store = BrowserStore(searcher: searcher, namer: StubNamer(), storage: storage, locate: { user })
 
         await store.launch()
 
@@ -216,7 +217,8 @@ struct BrowserStoreTests {
             """
         defaults.set(Data(layerVersion.utf8), forKey: "savedTabs.v1")
 
-        let store = BrowserStore(searcher: searcher, storage: UserDefaultsTabStorage(defaults: defaults))
+        let store = BrowserStore(
+            searcher: searcher, namer: StubNamer(), storage: UserDefaultsTabStorage(defaults: defaults))
 
         #expect(store.browser.tabs.map(\.query) == [supermarket, SearchQuery(text: "ラーメン", category: nil)])
         #expect(store.browser.tabs.map(\.color) == [.orange, .skyBlue])
