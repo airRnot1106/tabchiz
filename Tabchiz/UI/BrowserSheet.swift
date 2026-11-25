@@ -6,7 +6,8 @@ extension PresentationDetent {
 }
 
 /// The sheet that always rests over the map, as in Maps. From top to bottom: the search field of the tab on
-/// screen with its back button, the tab's page, and the tab bar.
+/// screen with its back button and the new-tab button, the tab's page, and the tab bar. In the overview the search field and the page
+/// give way to a list of the tabs.
 struct BrowserSheet: View {
     private static let headerHeight: CGFloat = 72
     static let collapsedHeight = headerHeight + TabBar.height
@@ -22,9 +23,15 @@ struct BrowserSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
-                .frame(height: Self.headerHeight, alignment: .bottom)
-            page
+            if store.browser.mode.scene == .overview {
+                overviewHeader
+                    .frame(height: Self.headerHeight, alignment: .bottom)
+                OverviewPage(tabs: store.browser.tabs) { store.showTab($0.id) }
+            } else {
+                header
+                    .frame(height: Self.headerHeight, alignment: .bottom)
+                page
+            }
             // The keyboard takes the bar's place while a query is typed.
             if !isEditing {
                 TabBar(store: store)
@@ -65,11 +72,47 @@ struct BrowserSheet: View {
                     isEditing = false
                 }
                 .accessibilityIdentifier("cancelSearchButton")
+            } else {
+                newTabButton
             }
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
         // The header keeps its height, so the collapsed sheet always shows it whole.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+    }
+
+    private var newTabButton: some View {
+        Button {
+            store.addTab()
+        } label: {
+            Image(systemName: "plus")
+                .font(.body.weight(.semibold))
+                .frame(width: 44, height: 44)
+                .background(.fill.tertiary, in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!store.browser.canAddTab)
+        .opacity(store.browser.canAddTab ? 1 : 0.4)
+        .accessibilityLabel(store.browser.canAddTab ? "新規タブ" : "タブは\(Browser.maxTabs)個までです")
+        .accessibilityIdentifier("newTabButton")
+    }
+
+    private var overviewHeader: some View {
+        let tabs = store.browser.tabs
+        return HStack(spacing: 8) {
+            Label("全体", systemImage: "square.3.layers.3d")
+                .font(.headline)
+            Spacer()
+            Text("\(tabs.count)タブ・\(tabs.map(\.places.count).reduce(0, +))件")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("overviewSummary")
+        }
+        .padding(.horizontal, 20)
+        .frame(height: 44)
+        .padding(.bottom, 8)
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 

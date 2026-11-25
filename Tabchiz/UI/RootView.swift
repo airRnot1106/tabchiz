@@ -5,15 +5,32 @@ struct RootView: View {
     let store: BrowserStore
     let showsUserLocation: Bool
 
-    @State private var detent: PresentationDetent = .medium
+    /// The sheet's height over a tab, and over the overview, where it starts low to leave the map in view.
+    @State private var tabDetent: PresentationDetent = .medium
+    @State private var overviewDetent: PresentationDetent = .collapsed
+
+    private var isOverview: Bool { store.browser.mode.scene == .overview }
+
+    private var detent: Binding<PresentationDetent> {
+        Binding(
+            get: { isOverview ? overviewDetent : tabDetent },
+            set: { newValue in
+                if isOverview {
+                    overviewDetent = newValue
+                } else {
+                    tabDetent = newValue
+                }
+            }
+        )
+    }
 
     var body: some View {
         GeometryReader { geometry in
-            let insets = Insets(geometry: geometry, detent: detent)
+            let insets = Insets(geometry: geometry, detent: detent.wrappedValue)
             ZStack(alignment: .top) {
                 MapCanvas(
                     content: MapContent(browser: store.browser),
-                    camera: store.browser.activeTab.current.camera,
+                    camera: isOverview ? store.browser.overviewCamera : store.browser.activeTab.current.camera,
                     command: store.cameraCommand,
                     showsUserLocation: showsUserLocation,
                     controlInsets: UIEdgeInsets(insets.controls),
@@ -26,18 +43,25 @@ struct RootView: View {
                         showMap()
                         store.jump(to: placeID, in: tabID)
                     },
+                    onJumpToCluster: { coordinates, tabID in
+                        store.jumpToResults(framing: coordinates, in: tabID)
+                    },
                     onCameraChange: { store.cameraDidChange($0, in: $1) }
                 )
                 .ignoresSafeArea()
 
-                if store.showsResearchButton {
+                if isOverview {
+                    OverviewLegend(tabs: store.browser.tabs)
+                        .padding(.horizontal, 12)
+                        .padding(.top, 8)
+                } else if store.showsResearchButton {
                     researchButton
                 }
             }
         }
         .sheet(isPresented: .constant(true)) {
-            BrowserSheet(store: store, detent: $detent)
-                .presentationDetents([.collapsed, .medium, .large], selection: $detent)
+            BrowserSheet(store: store, detent: detent)
+                .presentationDetents([.collapsed, .medium, .large], selection: detent)
                 .presentationBackgroundInteraction(.enabled(upThrough: .medium))
                 .interactiveDismissDisabled()
         }
@@ -58,8 +82,8 @@ struct RootView: View {
 
     /// The place page shows next to the map, not over it.
     private func showMap() {
-        if detent == .large {
-            detent = .medium
+        if tabDetent == .large {
+            tabDetent = .medium
         }
     }
 }
