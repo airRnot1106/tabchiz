@@ -241,7 +241,7 @@ final class BrowserStore {
                 retryAt = budgetRetryAt
             case .granted:
                 do {
-                    let places = try await searcher.search(search.query, region: search.region.mkRegion)
+                    let places = try await searcher.search(search.query, region: search.region)
                     guard !Task.isCancelled else { return }
                     apply(.loaded(places.dedupedByID()), for: search, in: id)
                     return

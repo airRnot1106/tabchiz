@@ -32,8 +32,8 @@ nonisolated final class StubSearcher: PlaceSearcher {
 
     var regions: [CameraRegion] { requested.withLock { $0 } }
 
-    func search(_ query: SearchQuery, region: MKCoordinateRegion) async throws -> [Place] {
-        requested.withLock { $0.append(CameraRegion(region)) }
+    func search(_ query: SearchQuery, region: CameraRegion) async throws -> [Place] {
+        requested.withLock { $0.append(region) }
         if let delay = delays[query.text] {
             try await Task.sleep(for: delay)
         }
